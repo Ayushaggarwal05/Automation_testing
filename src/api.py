@@ -18,7 +18,18 @@ class APIService:
 
     def health_check(self) -> Dict[str, str]:
         """Simple health check endpoint."""
-        return {"status": "ok", "service": "automation-api", "version": "1.0.0"}
+        return {"status": "ok", "service": "automation-api", "version": "1.1.0"}
+
+    def update_item_status(self, token: str, item_id: int, new_status: str) -> Dict[str, Any]:
+        """Update an item's status if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        for item in self.data_store["items"]:
+            if item["id"] == item_id:
+                item["status"] = new_status
+                return {"message": f"Item {item_id} status updated to {new_status}", "item": item, "status_code": 200}
+        return {"error": f"Item with id {item_id} not found", "status_code": 404}
 
     def get_items(self, token: Optional[str] = None) -> Dict[str, Any]:
         """Fetch items if authorized."""
