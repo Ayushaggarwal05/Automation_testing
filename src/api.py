@@ -36,6 +36,28 @@ class APIService:
         self.data_store["items"].append(new_item)
         return {"message": "Item added successfully", "item": new_item, "status_code": 201}
 
+    def get_item_by_id(self, token: str, item_id: int) -> Dict[str, Any]:
+        """Fetch a specific item by ID if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        item = next((i for i in self.data_store["items"] if i["id"] == item_id), None)
+        if not item:
+            return {"error": f"Item with id {item_id} not found", "status_code": 404}
+        return {"data": item, "status_code": 200}
+
+    def delete_item(self, token: str, item_id: int) -> Dict[str, Any]:
+        """Delete an item by ID if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        initial_count = len(self.data_store["items"])
+        self.data_store["items"] = [i for i in self.data_store["items"] if i["id"] != item_id]
+        
+        if len(self.data_store["items"]) == initial_count:
+            return {"error": f"Item with id {item_id} not found", "status_code": 404}
+        return {"message": f"Item {item_id} deleted successfully", "status_code": 200}
+
 
 if __name__ == "__main__":
     api = APIService()
@@ -46,3 +68,6 @@ if __name__ == "__main__":
     print("[API] Get items (Unauthorized):", api.get_items())
     print("[API] Get items (Authorized):", api.get_items(auth_token))
     print("[API] Add item:", api.add_item(auth_token, "Item Gamma"))
+    print("[API] Get item by ID:", api.get_item_by_id(auth_token, 1))
+    print("[API] Delete item:", api.delete_item(auth_token, 2))
+

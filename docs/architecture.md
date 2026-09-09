@@ -16,7 +16,7 @@ graph TD
 ## Components
 
 ### 1. API Service (`src/api.py`)
-- Provides entry points for health checks, data retrieval, and data mutations.
+- Provides entry points for health checks, data retrieval, single-item lookups, and item creation/deletion.
 - Interacts with `AuthService` to ensure protected routes have valid credentials.
 
 ### 2. Authentication Service (`src/auth.py`)
