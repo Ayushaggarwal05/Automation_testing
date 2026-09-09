@@ -47,6 +47,12 @@ class TestAPIService(unittest.TestCase):
         res = self.api.get_items(self.token)
         self.assertEqual(res["status_code"], 200)
         self.assertTrue(len(res["data"]) >= 2)
+        self.assertEqual(res["count"], len(res["data"]))
+
+    def test_get_items_filtered_by_status(self):
+        res = self.api.get_items(self.token, status="active")
+        self.assertEqual(res["status_code"], 200)
+        self.assertTrue(all(item["status"] == "active" for item in res["data"]))
 
     def test_add_and_delete_item(self):
         # Add item

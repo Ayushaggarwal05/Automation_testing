@@ -31,11 +31,16 @@ class APIService:
                 return {"message": f"Item {item_id} status updated to {new_status}", "item": item, "status_code": 200}
         return {"error": f"Item with id {item_id} not found", "status_code": 404}
 
-    def get_items(self, token: Optional[str] = None) -> Dict[str, Any]:
-        """Fetch items if authorized."""
+    def get_items(self, token: Optional[str] = None, status: Optional[str] = None) -> Dict[str, Any]:
+        """Fetch items if authorized, with optional status filter."""
         if not token or not self.auth_service.validate_token(token):
             return {"error": "Unauthorized", "status_code": 401}
-        return {"data": self.data_store["items"], "status_code": 200}
+        
+        items = self.data_store["items"]
+        if status:
+            items = [item for item in items if item.get("status") == status]
+            
+        return {"data": items, "count": len(items), "status_code": 200}
 
     def add_item(self, token: str, item_name: str) -> Dict[str, Any]:
         """Add a new item if authorized."""
