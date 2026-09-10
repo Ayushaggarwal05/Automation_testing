@@ -69,6 +69,18 @@ class TestAPIService(unittest.TestCase):
         del_res = self.api.delete_item(self.token, item_id)
         self.assertEqual(del_res["status_code"], 200)
 
+    def test_search_items(self):
+        # Search matching items
+        search_res = self.api.search_items(self.token, "Alpha")
+        self.assertEqual(search_res["status_code"], 200)
+        self.assertEqual(search_res["count"], 1)
+        self.assertEqual(search_res["data"][0]["name"], "Item Alpha")
+
+        # Search non-matching items
+        empty_res = self.api.search_items(self.token, "NonExistent")
+        self.assertEqual(empty_res["status_code"], 200)
+        self.assertEqual(empty_res["count"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

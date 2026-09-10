@@ -62,6 +62,17 @@ class APIService:
             return {"error": f"Item with id {item_id} not found", "status_code": 404}
         return {"data": item, "status_code": 200}
 
+    def search_items(self, token: str, query: str) -> Dict[str, Any]:
+        """Search items matching name query if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        results = [
+            item for item in self.data_store["items"]
+            if query.lower() in item.get("name", "").lower()
+        ]
+        return {"query": query, "data": results, "count": len(results), "status_code": 200}
+
     def delete_item(self, token: str, item_id: int) -> Dict[str, Any]:
         """Delete an item by ID if authorized."""
         if not self.auth_service.validate_token(token):
