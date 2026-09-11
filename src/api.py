@@ -3,7 +3,10 @@ Core API service handling mock endpoints and routing logic.
 """
 
 from typing import Dict, Any, Optional
-from auth import AuthService
+try:
+    from auth import AuthService
+except ImportError:
+    from src.auth import AuthService
 
 
 class APIService:
