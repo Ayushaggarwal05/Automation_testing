@@ -76,6 +76,29 @@ class APIService:
         ]
         return {"query": query, "data": results, "count": len(results), "status_code": 200}
 
+    def batch_add_items(self, token: str, item_names: list) -> Dict[str, Any]:
+        """Add multiple items in a single batch operation."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        added = []
+        for name in item_names:
+            new_id = len(self.data_store["items"]) + 1
+            item = {"id": new_id, "name": name, "status": "active"}
+            self.data_store["items"].append(item)
+            added.append(item)
+        return {"message": f"Successfully added {len(added)} items", "items": added, "status_code": 201}
+
+    def batch_delete_items(self, token: str, item_ids: list) -> Dict[str, Any]:
+        """Delete multiple items by ID in a single batch operation."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        initial_count = len(self.data_store["items"])
+        self.data_store["items"] = [i for i in self.data_store["items"] if i["id"] not in item_ids]
+        deleted_count = initial_count - len(self.data_store["items"])
+        return {"message": f"Successfully deleted {deleted_count} items", "deleted_count": deleted_count, "status_code": 200}
+
     def delete_item(self, token: str, item_id: int) -> Dict[str, Any]:
         """Delete an item by ID if authorized."""
         if not self.auth_service.validate_token(token):

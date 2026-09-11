@@ -81,6 +81,19 @@ class TestAPIService(unittest.TestCase):
         self.assertEqual(empty_res["status_code"], 200)
         self.assertEqual(empty_res["count"], 0)
 
+    def test_batch_operations(self):
+        # Batch add items
+        names = ["Batch One", "Batch Two", "Batch Three"]
+        batch_res = self.api.batch_add_items(self.token, names)
+        self.assertEqual(batch_res["status_code"], 201)
+        self.assertEqual(len(batch_res["items"]), 3)
+
+        # Batch delete items
+        ids = [item["id"] for item in batch_res["items"]]
+        del_batch_res = self.api.batch_delete_items(self.token, ids)
+        self.assertEqual(del_batch_res["status_code"], 200)
+        self.assertEqual(del_batch_res["deleted_count"], 3)
+
 
 if __name__ == "__main__":
     unittest.main()
