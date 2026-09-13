@@ -6,38 +6,49 @@ from typing import Dict, Any, Optional, List
 try:
     from auth import AuthService
     from events import events
+    from storage import InMemoryStorage, BaseStorage
+    from middleware import MiddlewarePipeline, RequestContext
 except ImportError:
     from src.auth import AuthService
     from src.events import events
+    from src.storage import InMemoryStorage, BaseStorage
+    from src.middleware import MiddlewarePipeline, RequestContext
 
 
 class APIService:
-    def __init__(self):
+    def __init__(self, storage: Optional[BaseStorage] = None):
         self.auth_service = AuthService()
         self.events = events
-        self.data_store: Dict[str, Any] = {
-            "items": [
+        self.middleware = MiddlewarePipeline()
+        self.storage: BaseStorage = storage or InMemoryStorage(
+            initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
                 {"id": 2, "name": "Item Beta", "status": "pending"},
             ]
-        }
+        )
+
+    @property
+    def data_store(self) -> Dict[str, Any]:
+        """Backwards-compatible interface for accessing stored items."""
+        return {"items": self.storage.get_all()}
 
     def health_check(self) -> Dict[str, str]:
         """Simple health check endpoint."""
-        return {"status": "ok", "service": "automation-api", "version": "1.2.0"}
+        return {"status": "ok", "service": "automation-api", "version": "2.0.0"}
 
     def update_item_status(self, token: str, item_id: int, new_status: str) -> Dict[str, Any]:
         """Update an item's status if authorized."""
         if not self.auth_service.validate_token(token):
             return {"error": "Unauthorized", "status_code": 401}
 
-        for item in self.data_store["items"]:
-            if item["id"] == item_id:
-                old_status = item["status"]
-                item["status"] = new_status
-                self.events.publish("item_status_updated", {"id": item_id, "old_status": old_status, "new_status": new_status})
-                return {"message": f"Item {item_id} status updated to {new_status}", "item": item, "status_code": 200}
-        return {"error": f"Item with id {item_id} not found", "status_code": 404}
+        item = self.storage.get_by_id(item_id)
+        if not item:
+            return {"error": f"Item with id {item_id} not found", "status_code": 404}
+
+        old_status = item.get("status")
+        updated_item = self.storage.update(item_id, {"status": new_status})
+        self.events.publish("item_status_updated", {"id": item_id, "old_status": old_status, "new_status": new_status})
+        return {"message": f"Item {item_id} status updated to {new_status}", "item": updated_item, "status_code": 200}
 
     def get_audit_events(self, token: str, event_filter: str = "") -> Dict[str, Any]:
         """Retrieve audit log events if authorized."""
@@ -60,7 +71,7 @@ class APIService:
         if not token or not self.auth_service.validate_token(token):
             return {"error": "Unauthorized", "status_code": 401}
         
-        items = list(self.data_store["items"])
+        items = self.storage.get_all()
         if status:
             items = [item for item in items if item.get("status") == status]
             
@@ -89,9 +100,9 @@ class APIService:
         if not self.auth_service.validate_token(token):
             return {"error": "Unauthorized", "status_code": 401}
         
-        new_id = len(self.data_store["items"]) + 1
+        new_id = self.storage.count() + 1
         new_item = {"id": new_id, "name": item_name, "status": "active"}
-        self.data_store["items"].append(new_item)
+        self.storage.add(new_item)
         self.events.publish("item_created", {"id": new_id, "name": item_name})
         return {"message": "Item added successfully", "item": new_item, "status_code": 201}
 
@@ -100,7 +111,7 @@ class APIService:
         if not self.auth_service.validate_token(token):
             return {"error": "Unauthorized", "status_code": 401}
         
-        item = next((i for i in self.data_store["items"] if i["id"] == item_id), None)
+        item = self.storage.get_by_id(item_id)
         if not item:
             return {"error": f"Item with id {item_id} not found", "status_code": 404}
         return {"data": item, "status_code": 200}
@@ -111,7 +122,7 @@ class APIService:
             return {"error": "Unauthorized", "status_code": 401}
         
         results = [
-            item for item in self.data_store["items"]
+            item for item in self.storage.get_all()
             if query.lower() in item.get("name", "").lower()
         ]
         return {"query": query, "data": results, "count": len(results), "status_code": 200}
@@ -123,9 +134,9 @@ class APIService:
         
         added = []
         for name in item_names:
-            new_id = len(self.data_store["items"]) + 1
+            new_id = self.storage.count() + 1
             item = {"id": new_id, "name": name, "status": "active"}
-            self.data_store["items"].append(item)
+            self.storage.add(item)
             added.append(item)
         return {"message": f"Successfully added {len(added)} items", "items": added, "status_code": 201}
 
@@ -134,9 +145,10 @@ class APIService:
         if not self.auth_service.validate_token(token):
             return {"error": "Unauthorized", "status_code": 401}
         
-        initial_count = len(self.data_store["items"])
-        self.data_store["items"] = [i for i in self.data_store["items"] if i["id"] not in item_ids]
-        deleted_count = initial_count - len(self.data_store["items"])
+        deleted_count = 0
+        for item_id in item_ids:
+            if self.storage.delete(item_id):
+                deleted_count += 1
         return {"message": f"Successfully deleted {deleted_count} items", "deleted_count": deleted_count, "status_code": 200}
 
     def delete_item(self, token: str, item_id: int) -> Dict[str, Any]:
@@ -144,10 +156,7 @@ class APIService:
         if not self.auth_service.validate_token(token):
             return {"error": "Unauthorized", "status_code": 401}
         
-        initial_count = len(self.data_store["items"])
-        self.data_store["items"] = [i for i in self.data_store["items"] if i["id"] != item_id]
-        
-        if len(self.data_store["items"]) == initial_count:
+        if not self.storage.delete(item_id):
             return {"error": f"Item with id {item_id} not found", "status_code": 404}
         self.events.publish("item_deleted", {"id": item_id})
         return {"message": f"Item {item_id} deleted successfully", "status_code": 200}

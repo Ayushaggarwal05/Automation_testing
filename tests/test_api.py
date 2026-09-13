@@ -37,7 +37,7 @@ class TestAPIService(unittest.TestCase):
     def test_health_check(self):
         res = self.api.health_check()
         self.assertEqual(res["status"], "ok")
-        self.assertEqual(res["version"], "1.2.0")
+        self.assertEqual(res["version"], "2.0.0")
 
     def test_get_items_unauthorized(self):
         res = self.api.get_items()
