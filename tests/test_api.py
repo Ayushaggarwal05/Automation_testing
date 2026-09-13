@@ -54,6 +54,19 @@ class TestAPIService(unittest.TestCase):
         self.assertEqual(res["status_code"], 200)
         self.assertTrue(all(item["status"] == "active" for item in res["data"]))
 
+    def test_get_items_pagination_and_sorting(self):
+        # Test pagination limit
+        res_paginated = self.api.get_items(self.token, limit=1, offset=0)
+        self.assertEqual(res_paginated["status_code"], 200)
+        self.assertEqual(len(res_paginated["data"]), 1)
+        self.assertEqual(res_paginated["count"], 1)
+
+        # Test reverse sorting by name
+        res_sorted = self.api.get_items(self.token, sort_by="name", reverse=True)
+        self.assertEqual(res_sorted["status_code"], 200)
+        names = [item["name"] for item in res_sorted["data"]]
+        self.assertEqual(names, sorted(names, reverse=True))
+
     def test_add_and_delete_item(self):
         # Add item
         add_res = self.api.add_item(self.token, "New Item")

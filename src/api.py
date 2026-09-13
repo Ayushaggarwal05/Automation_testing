@@ -34,16 +34,42 @@ class APIService:
                 return {"message": f"Item {item_id} status updated to {new_status}", "item": item, "status_code": 200}
         return {"error": f"Item with id {item_id} not found", "status_code": 404}
 
-    def get_items(self, token: Optional[str] = None, status: Optional[str] = None) -> Dict[str, Any]:
-        """Fetch items if authorized, with optional status filter."""
+    def get_items(
+        self,
+        token: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: Optional[int] = None,
+        offset: int = 0,
+        sort_by: str = "id",
+        reverse: bool = False,
+    ) -> Dict[str, Any]:
+        """Fetch items if authorized, with optional filtering, sorting, and pagination."""
         if not token or not self.auth_service.validate_token(token):
             return {"error": "Unauthorized", "status_code": 401}
         
-        items = self.data_store["items"]
+        items = list(self.data_store["items"])
         if status:
             items = [item for item in items if item.get("status") == status]
             
-        return {"data": items, "count": len(items), "status_code": 200}
+        # Sorting
+        if sort_by in ("id", "name", "status"):
+            items.sort(key=lambda x: x.get(sort_by, ""), reverse=reverse)
+
+        total_count = len(items)
+        # Pagination
+        if offset > 0:
+            items = items[offset:]
+        if limit is not None and limit >= 0:
+            items = items[:limit]
+
+        return {
+            "data": items,
+            "count": len(items),
+            "total_count": total_count,
+            "offset": offset,
+            "limit": limit,
+            "status_code": 200,
+        }
 
     def add_item(self, token: str, item_name: str) -> Dict[str, Any]:
         """Add a new item if authorized."""
