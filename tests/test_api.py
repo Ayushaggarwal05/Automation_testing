@@ -37,7 +37,14 @@ class TestAPIService(unittest.TestCase):
     def test_health_check(self):
         res = self.api.health_check()
         self.assertEqual(res["status"], "ok")
-        self.assertEqual(res["version"], "2.0.0")
+        self.assertEqual(res["version"], "2.1.0")
+
+    def test_get_metrics(self):
+        self.api.health_check()
+        metrics_res = self.api.get_metrics(self.token)
+        self.assertEqual(metrics_res["status_code"], 200)
+        self.assertIn("uptime_seconds", metrics_res["metrics"])
+        self.assertGreaterEqual(metrics_res["metrics"]["total_requests"], 1)
 
     def test_get_items_unauthorized(self):
         res = self.api.get_items()

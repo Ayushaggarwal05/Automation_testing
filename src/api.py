@@ -9,12 +9,14 @@ try:
     from storage import InMemoryStorage, BaseStorage
     from middleware import MiddlewarePipeline, RequestContext
     from cache import CacheManager
+    from metrics import metrics
 except ImportError:
     from src.auth import AuthService
     from src.events import events
     from src.storage import InMemoryStorage, BaseStorage
     from src.middleware import MiddlewarePipeline, RequestContext
     from src.cache import CacheManager
+    from src.metrics import metrics
 
 
 class APIService:
@@ -23,6 +25,7 @@ class APIService:
         self.events = events
         self.middleware = MiddlewarePipeline()
         self.cache = cache or CacheManager(default_ttl=300)
+        self.metrics = metrics
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -37,7 +40,14 @@ class APIService:
 
     def health_check(self) -> Dict[str, str]:
         """Simple health check endpoint."""
-        return {"status": "ok", "service": "automation-api", "version": "2.0.0"}
+        self.metrics.record_request("/health", 1.0, 200)
+        return {"status": "ok", "service": "automation-api", "version": "2.1.0"}
+
+    def get_metrics(self, token: str) -> Dict[str, Any]:
+        """Retrieve aggregated runtime metrics if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        return {"metrics": self.metrics.get_summary(), "status_code": 200}
 
     def update_item_status(self, token: str, item_id: int, new_status: str) -> Dict[str, Any]:
         """Update an item's status if authorized."""
