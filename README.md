@@ -1,6 +1,6 @@
 # Automation Testing Repository
 
-Welcome to the **Automation Testing** sample repository (v2.3.0). This repository is structured to test GitHub workflows, CI/CD pipelines, and repository automations.
+Welcome to the **Automation Testing** sample repository (v2.4.0). This repository is structured to test GitHub workflows, CI/CD pipelines, and repository automations.
 
 ## Project Structure
 
@@ -37,7 +37,7 @@ python src/api.py
 ## Features
 
 - **Authentication Module**: Token generation, role-based access control, and validation mock utilities.
-- **REST API Service**: Endpoints for health checks (reporting service version 2.3.0), resource lookup, creation, status update, deletion, and webhook management.
+- **REST API Service**: Endpoints for health checks (reporting service version 2.4.0), resource lookup, creation, status update, deletion, and webhook management.
 - **Webhook Management**: Register subscriptions, list active webhooks, and process event payloads with HMAC-SHA256 signatures.
 - **Documentation**: Architectural overview and system diagrams.
 
@@ -45,7 +45,7 @@ python src/api.py
 
 | Method | Endpoint | Description | Auth Required |
 |---|---|---|---|
-| `GET` | `/health` | Service health status check (v2.3.0) | No |
+| `GET` | `/health` | Service health status check (v2.4.0) | No |
 | `GET` | `/items` | List all stored items | Yes |
 | `GET` | `/items/<id>` | Fetch single item by ID | Yes |
 | `POST` | `/items` | Create a new item | Yes |
@@ -53,6 +53,7 @@ python src/api.py
 | `DELETE` | `/items/<id>` | Delete an item by ID | Yes |
 | `POST` | `/webhooks` | Register a new webhook subscription | Yes |
 | `GET` | `/webhooks` | List active webhook subscriptions | Yes |
+| `GET` | `/plugins` | List active plugins | Yes |
 
 ### Webhook API & Payload Verification
 
@@ -78,6 +79,18 @@ When events are dispatched to registered webhooks, payloads are signed to guaran
 1. The JSON payload is formatted with key sorting (`sort_keys=True`).
 2. An HMAC-SHA256 signature is calculated over the canonical payload using the configured webhook secret.
 3. Receiving services can recompute the HMAC-SHA256 signature using their shared secret and compare it against the signature header to verify that the message originated from the service and was not altered in transit.
+
+### Plugin API
+
+#### Endpoint Details
+
+##### `list_plugins` (`GET /plugins`)
+- **Authentication**: Requires a valid authorization token verified via `AuthService`.
+- **Parameters**:
+  - `token` (*string*, required): Authorization token.
+- **Response**:
+  - `200 OK`: `{"plugins": [{"name": str, "version": str, "enabled": bool}], "status_code": 200}`
+  - `401 Unauthorized`: `{"error": "Unauthorized", "status_code": 401}`
 
 ## License
 
