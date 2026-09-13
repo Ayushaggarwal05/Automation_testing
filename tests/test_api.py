@@ -37,7 +37,7 @@ class TestAPIService(unittest.TestCase):
     def test_health_check(self):
         res = self.api.health_check()
         self.assertEqual(res["status"], "ok")
-        self.assertEqual(res["version"], "1.1.0")
+        self.assertEqual(res["version"], "1.2.0")
 
     def test_get_items_unauthorized(self):
         res = self.api.get_items()
@@ -106,6 +106,16 @@ class TestAPIService(unittest.TestCase):
         del_batch_res = self.api.batch_delete_items(self.token, ids)
         self.assertEqual(del_batch_res["status_code"], 200)
         self.assertEqual(del_batch_res["deleted_count"], 3)
+
+    def test_audit_events(self):
+        # Clear logs and perform operations
+        self.api.events.clear_logs()
+        self.api.add_item(self.token, "Event Test Item")
+        self.api.update_item_status(self.token, 1, "completed")
+
+        res = self.api.get_audit_events(self.token)
+        self.assertEqual(res["status_code"], 200)
+        self.assertGreaterEqual(res["count"], 2)
 
 
 if __name__ == "__main__":

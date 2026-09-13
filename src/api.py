@@ -2,16 +2,19 @@
 Core API service handling mock endpoints and routing logic.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 try:
     from auth import AuthService
+    from events import events
 except ImportError:
     from src.auth import AuthService
+    from src.events import events
 
 
 class APIService:
     def __init__(self):
         self.auth_service = AuthService()
+        self.events = events
         self.data_store: Dict[str, Any] = {
             "items": [
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -21,7 +24,7 @@ class APIService:
 
     def health_check(self) -> Dict[str, str]:
         """Simple health check endpoint."""
-        return {"status": "ok", "service": "automation-api", "version": "1.1.0"}
+        return {"status": "ok", "service": "automation-api", "version": "1.2.0"}
 
     def update_item_status(self, token: str, item_id: int, new_status: str) -> Dict[str, Any]:
         """Update an item's status if authorized."""
@@ -30,9 +33,19 @@ class APIService:
 
         for item in self.data_store["items"]:
             if item["id"] == item_id:
+                old_status = item["status"]
                 item["status"] = new_status
+                self.events.publish("item_status_updated", {"id": item_id, "old_status": old_status, "new_status": new_status})
                 return {"message": f"Item {item_id} status updated to {new_status}", "item": item, "status_code": 200}
         return {"error": f"Item with id {item_id} not found", "status_code": 404}
+
+    def get_audit_events(self, token: str, event_filter: str = "") -> Dict[str, Any]:
+        """Retrieve audit log events if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        logs = self.events.get_audit_log(event_filter)
+        return {"events": logs, "count": len(logs), "status_code": 200}
 
     def get_items(
         self,
@@ -79,6 +92,7 @@ class APIService:
         new_id = len(self.data_store["items"]) + 1
         new_item = {"id": new_id, "name": item_name, "status": "active"}
         self.data_store["items"].append(new_item)
+        self.events.publish("item_created", {"id": new_id, "name": item_name})
         return {"message": "Item added successfully", "item": new_item, "status_code": 201}
 
     def get_item_by_id(self, token: str, item_id: int) -> Dict[str, Any]:
@@ -135,6 +149,7 @@ class APIService:
         
         if len(self.data_store["items"]) == initial_count:
             return {"error": f"Item with id {item_id} not found", "status_code": 404}
+        self.events.publish("item_deleted", {"id": item_id})
         return {"message": f"Item {item_id} deleted successfully", "status_code": 200}
 
 
