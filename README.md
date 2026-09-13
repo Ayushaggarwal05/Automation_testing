@@ -1,6 +1,6 @@
 # Automation Testing Repository
 
-Welcome to the **Automation Testing** sample repository. This repository is structured to test GitHub workflows, CI/CD pipelines, and repository automations.
+Welcome to the **Automation Testing** sample repository (v2.3.0). This repository is structured to test GitHub workflows, CI/CD pipelines, and repository automations.
 
 ## Project Structure
 
@@ -11,7 +11,8 @@ Welcome to the **Automation Testing** sample repository. This repository is stru
 │   └── architecture.md
 └── src/
     ├── api.py
-    └── auth.py
+    ├── auth.py
+    └── webhooks.py
 ```
 
 ## Getting Started
@@ -36,19 +37,47 @@ python src/api.py
 ## Features
 
 - **Authentication Module**: Token generation, role-based access control, and validation mock utilities.
-- **REST API Service**: Endpoints for health checks, resource lookup, creation, status update, and deletion.
+- **REST API Service**: Endpoints for health checks (reporting service version 2.3.0), resource lookup, creation, status update, deletion, and webhook management.
+- **Webhook Management**: Register subscriptions, list active webhooks, and process event payloads with HMAC-SHA256 signatures.
 - **Documentation**: Architectural overview and system diagrams.
 
 ## API Endpoints Summary
 
 | Method | Endpoint | Description | Auth Required |
 |---|---|---|---|
-| `GET` | `/health` | Service health status check | No |
+| `GET` | `/health` | Service health status check (v2.3.0) | No |
 | `GET` | `/items` | List all stored items | Yes |
 | `GET` | `/items/<id>` | Fetch single item by ID | Yes |
 | `POST` | `/items` | Create a new item | Yes |
 | `PATCH` | `/items/<id>/status` | Update status of an item | Yes |
 | `DELETE` | `/items/<id>` | Delete an item by ID | Yes |
+| `POST` | `/webhooks` | Register a new webhook subscription | Yes |
+| `GET` | `/webhooks` | List active webhook subscriptions | Yes |
+
+### Webhook API & Payload Verification
+
+#### Endpoint Details
+
+##### `register_webhook` (`POST /webhooks`)
+- **Authentication**: Requires a valid Bearer/Auth token.
+- **Parameters**:
+  - `event_name` (*string*, required): Name of the event to subscribe to.
+  - `target_url` (*string*, required): Destination URL for webhook notifications.
+- **Response**: `201 Created` with subscription details (UUID, target URL, event name, creation timestamp) or `401 Unauthorized`.
+
+##### `list_webhooks` (`GET /webhooks`)
+- **Authentication**: Requires a valid Bearer/Auth token.
+- **Parameters**:
+  - `event_filter` (*string*, optional): Filter active webhooks by event name.
+- **Response**: `200 OK` with a list of active subscriptions and total count, or `401 Unauthorized`.
+
+#### Webhook Payload Verification (HMAC-SHA256)
+
+When events are dispatched to registered webhooks, payloads are signed to guarantee authenticity and integrity:
+
+1. The JSON payload is formatted with key sorting (`sort_keys=True`).
+2. An HMAC-SHA256 signature is calculated over the canonical payload using the configured webhook secret.
+3. Receiving services can recompute the HMAC-SHA256 signature using their shared secret and compare it against the signature header to verify that the message originated from the service and was not altered in transit.
 
 ## License
 
