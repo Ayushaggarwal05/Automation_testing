@@ -37,7 +37,12 @@ class TestAPIService(unittest.TestCase):
     def test_health_check(self):
         res = self.api.health_check()
         self.assertEqual(res["status"], "ok")
-        self.assertEqual(res["version"], "2.3.0")
+        self.assertEqual(res["version"], "2.4.0")
+
+    def test_list_plugins(self):
+        res = self.api.list_plugins(self.token)
+        self.assertEqual(res["status_code"], 200)
+        self.assertIn("plugins", res)
 
     def test_webhook_endpoints(self):
         res = self.api.register_webhook(self.token, "item_created", "https://example.com/item-hook")
