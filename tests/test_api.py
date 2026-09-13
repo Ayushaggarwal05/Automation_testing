@@ -37,7 +37,18 @@ class TestAPIService(unittest.TestCase):
     def test_health_check(self):
         res = self.api.health_check()
         self.assertEqual(res["status"], "ok")
-        self.assertEqual(res["version"], "2.1.0")
+        self.assertEqual(res["version"], "2.2.0")
+
+    def test_job_queue_endpoints(self):
+        # Enqueue job
+        res = self.api.enqueue_job(self.token, "export_csv", {"target": "user_items"})
+        self.assertEqual(res["status_code"], 202)
+        task_id = res["task"]["id"]
+
+        # Check job status
+        status_res = self.api.get_job_status(self.token, task_id)
+        self.assertEqual(status_res["status_code"], 200)
+        self.assertEqual(status_res["task"]["status"], "PENDING")
 
     def test_get_metrics(self):
         self.api.health_check()

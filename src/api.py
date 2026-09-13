@@ -10,6 +10,7 @@ try:
     from middleware import MiddlewarePipeline, RequestContext
     from cache import CacheManager
     from metrics import metrics
+    from task_queue import task_queue
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -17,6 +18,7 @@ except ImportError:
     from src.middleware import MiddlewarePipeline, RequestContext
     from src.cache import CacheManager
     from src.metrics import metrics
+    from src.task_queue import task_queue
 
 
 class APIService:
@@ -26,6 +28,7 @@ class APIService:
         self.middleware = MiddlewarePipeline()
         self.cache = cache or CacheManager(default_ttl=300)
         self.metrics = metrics
+        self.task_queue = task_queue
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -41,7 +44,25 @@ class APIService:
     def health_check(self) -> Dict[str, str]:
         """Simple health check endpoint."""
         self.metrics.record_request("/health", 1.0, 200)
-        return {"status": "ok", "service": "automation-api", "version": "2.1.0"}
+        return {"status": "ok", "service": "automation-api", "version": "2.2.0"}
+
+    def enqueue_job(self, token: str, job_name: str, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Enqueue a background task if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        task = self.task_queue.enqueue(task_name=job_name, payload=payload or {})
+        return {"message": "Job enqueued", "task": task.to_dict(), "status_code": 202}
+
+    def get_job_status(self, token: str, task_id: str) -> Dict[str, Any]:
+        """Check status of an enqueued job if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        task = self.task_queue.get_task(task_id)
+        if not task:
+            return {"error": f"Task {task_id} not found", "status_code": 404}
+        return {"task": task.to_dict(), "status_code": 200}
 
     def get_metrics(self, token: str) -> Dict[str, Any]:
         """Retrieve aggregated runtime metrics if authorized."""
