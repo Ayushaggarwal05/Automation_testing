@@ -11,6 +11,7 @@ try:
     from cache import CacheManager
     from metrics import metrics
     from task_queue import task_queue
+    from webhooks import webhooks
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -19,6 +20,7 @@ except ImportError:
     from src.cache import CacheManager
     from src.metrics import metrics
     from src.task_queue import task_queue
+    from src.webhooks import webhooks
 
 
 class APIService:
@@ -29,6 +31,7 @@ class APIService:
         self.cache = cache or CacheManager(default_ttl=300)
         self.metrics = metrics
         self.task_queue = task_queue
+        self.webhooks = webhooks
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -44,7 +47,23 @@ class APIService:
     def health_check(self) -> Dict[str, str]:
         """Simple health check endpoint."""
         self.metrics.record_request("/health", 1.0, 200)
-        return {"status": "ok", "service": "automation-api", "version": "2.2.0"}
+        return {"status": "ok", "service": "automation-api", "version": "2.3.0"}
+
+    def register_webhook(self, token: str, event_name: str, target_url: str) -> Dict[str, Any]:
+        """Register a webhook subscription if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        sub = self.webhooks.register(event_name, target_url)
+        return {"message": "Webhook registered successfully", "subscription": sub.to_dict(), "status_code": 201}
+
+    def list_webhooks(self, token: str, event_filter: Optional[str] = None) -> Dict[str, Any]:
+        """List active webhooks if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        subs = self.webhooks.list_subscriptions(event_filter)
+        return {"subscriptions": subs, "count": len(subs), "status_code": 200}
 
     def enqueue_job(self, token: str, job_name: str, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Enqueue a background task if authorized."""

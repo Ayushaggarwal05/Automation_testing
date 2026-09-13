@@ -37,7 +37,16 @@ class TestAPIService(unittest.TestCase):
     def test_health_check(self):
         res = self.api.health_check()
         self.assertEqual(res["status"], "ok")
-        self.assertEqual(res["version"], "2.2.0")
+        self.assertEqual(res["version"], "2.3.0")
+
+    def test_webhook_endpoints(self):
+        res = self.api.register_webhook(self.token, "item_created", "https://example.com/item-hook")
+        self.assertEqual(res["status_code"], 201)
+        self.assertEqual(res["subscription"]["event_name"], "item_created")
+
+        list_res = self.api.list_webhooks(self.token, event_filter="item_created")
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertGreaterEqual(list_res["count"], 1)
 
     def test_job_queue_endpoints(self):
         # Enqueue job
