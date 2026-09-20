@@ -98,3 +98,7 @@ MIT License.
 
 ## Automated Update: Feature updates require documentation synchronization.
 - Update relevant functional sections.
+
+## Automated Update: New subscription billing tiers and payment webhook flows introduced.
+- Document Pro and Enterprise subscription pricing plans
+- Add payment webhook ingestion flow and security verification
