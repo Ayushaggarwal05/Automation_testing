@@ -8,7 +8,7 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from utils import validate_item_payload, format_response, sanitize_input
+from utils import validate_item_payload, format_response, sanitize_input, validate_email, generate_slug, truncate_string
 
 
 class TestUtils(unittest.TestCase):
@@ -38,6 +38,27 @@ class TestUtils(unittest.TestCase):
         clean = sanitize_input(dirty)
         self.assertEqual(clean, "hello world")
 
+    def test_validate_email(self):
+        self.assertTrue(validate_email("user@example.com"))
+        self.assertTrue(validate_email("first.last+tag@sub.domain.co.uk"))
+        self.assertFalse(validate_email("invalid-email"))
+        self.assertFalse(validate_email("@missinguser.com"))
+        self.assertFalse(validate_email("user@.com"))
+        self.assertFalse(validate_email(""))
+
+    def test_generate_slug(self):
+        self.assertEqual(generate_slug("Hello World! 2026"), "hello-world-2026")
+        self.assertEqual(generate_slug("  Leading and Trailing  "), "leading-and-trailing")
+        self.assertEqual(generate_slug("Special @#$% Characters"), "special-characters")
+        self.assertEqual(generate_slug(""), "")
+
+    def test_truncate_string(self):
+        self.assertEqual(truncate_string("Short text", 20), "Short text")
+        self.assertEqual(truncate_string("This is a long sentence to truncate", 15), "This is a lo...")
+        self.assertEqual(truncate_string("Custom suffix test", 10, suffix="--"), "Custom s--")
+        self.assertEqual(truncate_string("", 5), "")
+
 
 if __name__ == "__main__":
     unittest.main()
+

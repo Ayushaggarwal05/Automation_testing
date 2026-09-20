@@ -13,6 +13,7 @@ class TaskStatus(str, Enum):
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
 
 
 class Task:
@@ -60,6 +61,15 @@ class TaskQueue:
         """Fetch task instance by its UUID."""
         return self._tasks.get(task_id)
 
+    def cancel_task(self, task_id: str) -> bool:
+        """Cancel a pending task."""
+        task = self._tasks.get(task_id)
+        if task and task.status == TaskStatus.PENDING:
+            task.status = TaskStatus.CANCELLED
+            task.completed_at = time.time()
+            return True
+        return False
+
     def process_next(self) -> Optional[Task]:
         """Process the first pending task in queue."""
         pending_task = next((t for t in self._tasks.values() if t.status == TaskStatus.PENDING), None)
@@ -83,6 +93,28 @@ class TaskQueue:
 
         return pending_task
 
+    def process_all(self) -> List[Task]:
+        """Process all currently pending tasks until none remain."""
+        processed: List[Task] = []
+        while True:
+            task = self.process_next()
+            if not task:
+                break
+            processed.append(task)
+        return processed
+
+    def clear(self) -> None:
+        """Clear all tasks from the queue."""
+        self._tasks.clear()
+
+    def get_metrics(self) -> Dict[str, int]:
+        """Return counts of tasks by status and total count."""
+        metrics: Dict[str, int] = {status.value: 0 for status in TaskStatus}
+        for task in self._tasks.values():
+            metrics[task.status.value] = metrics.get(task.status.value, 0) + 1
+        metrics["total"] = len(self._tasks)
+        return metrics
+
     def list_tasks(self, status_filter: Optional[TaskStatus] = None) -> List[Dict[str, Any]]:
         """List tasks with optional status filter."""
         tasks = self._tasks.values()
@@ -93,3 +125,4 @@ class TaskQueue:
 
 # Global task queue instance
 task_queue = TaskQueue()
+

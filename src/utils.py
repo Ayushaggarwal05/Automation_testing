@@ -40,3 +40,31 @@ def sanitize_input(text: str) -> str:
     # Strip any remaining HTML tags
     clean = re.sub(r'<[^>]*>', '', clean)
     return " ".join(clean.split())
+
+
+def validate_email(email: str) -> bool:
+    """Validate standard email format."""
+    if not email or not isinstance(email, str):
+        return False
+    pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    return bool(re.match(pattern, email.strip()))
+
+
+def generate_slug(text: str) -> str:
+    """Generate URL-safe slug from a string."""
+    if not text:
+        return ""
+    # Convert to lowercase and replace non-alphanumeric characters with hyphens
+    slug = re.sub(r'[^\w\s-]', '', text.lower())
+    slug = re.sub(r'[-\s]+', '-', slug).strip('-')
+    return slug
+
+
+def truncate_string(text: str, max_length: int, suffix: str = "...") -> str:
+    """Truncate a string to max_length including optional suffix."""
+    if not text or len(text) <= max_length:
+        return text or ""
+    if max_length <= len(suffix):
+        return text[:max_length]
+    return text[:max_length - len(suffix)] + suffix
+
