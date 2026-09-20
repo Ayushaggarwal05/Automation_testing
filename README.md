@@ -95,3 +95,6 @@ When events are dispatched to registered webhooks, payloads are signed to guaran
 ## License
 
 MIT License.
+
+## Automated Update: Feature updates require documentation synchronization.
+- Update relevant functional sections.
