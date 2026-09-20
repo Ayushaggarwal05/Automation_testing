@@ -45,6 +45,12 @@ class TestStorage(unittest.TestCase):
         self.assertFalse(self.storage.delete(999))
         self.assertEqual(self.storage.count(), 1)
 
+    def test_clear(self):
+        self.storage.clear()
+        self.assertEqual(self.storage.count(), 0)
+        self.assertEqual(len(self.storage.get_all()), 0)
+
+
 
 if __name__ == "__main__":
     unittest.main()

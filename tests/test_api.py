@@ -149,6 +149,40 @@ class TestAPIService(unittest.TestCase):
         self.assertEqual(res["status_code"], 200)
         self.assertGreaterEqual(res["count"], 2)
 
+    def test_get_item_summary(self):
+        res = self.api.get_item_summary(self.token)
+        self.assertEqual(res["status_code"], 200)
+        self.assertEqual(res["total_items"], 2)
+        self.assertIn("active", res["status_breakdown"])
+        self.assertIn("pending", res["status_breakdown"])
+
+    def test_batch_update_status(self):
+        res = self.api.batch_update_status(self.token, [1, 2], "archived")
+        self.assertEqual(res["status_code"], 200)
+        self.assertEqual(res["updated_count"], 2)
+        
+        items_res = self.api.get_items(self.token)
+        self.assertTrue(all(item["status"] == "archived" for item in items_res["data"]))
+
+    def test_export_items_json_and_csv(self):
+        json_res = self.api.export_items(self.token, format_type="json")
+        self.assertEqual(json_res["status_code"], 200)
+        self.assertEqual(json_res["format"], "json")
+        self.assertEqual(len(json_res["data"]), 2)
+
+        csv_res = self.api.export_items(self.token, format_type="csv")
+        self.assertEqual(csv_res["status_code"], 200)
+        self.assertIn("id,name,status", csv_res["data"])
+
+    def test_clear_items(self):
+        res = self.api.clear_items(self.token)
+        self.assertEqual(res["status_code"], 200)
+        self.assertEqual(res["cleared_count"], 2)
+
+        items_res = self.api.get_items(self.token)
+        self.assertEqual(items_res["count"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
+

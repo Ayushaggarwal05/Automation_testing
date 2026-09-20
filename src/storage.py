@@ -34,6 +34,11 @@ class BaseStorage(ABC):
         """Delete an item by its ID."""
         pass
 
+    @abstractmethod
+    def clear(self) -> None:
+        """Clear all stored items."""
+        pass
+
 
 class InMemoryStorage(BaseStorage):
     """In-memory thread-safe storage implementation."""
@@ -64,6 +69,9 @@ class InMemoryStorage(BaseStorage):
         initial_len = len(self._items)
         self._items = [item for item in self._items if item.get("id") != item_id]
         return len(self._items) < initial_len
+
+    def clear(self) -> None:
+        self._items.clear()
 
     def count(self) -> int:
         return len(self._items)

@@ -223,6 +223,76 @@ class APIService:
         self.events.publish("item_deleted", {"id": item_id})
         return {"message": f"Item {item_id} deleted successfully", "status_code": 200}
 
+    def get_item_summary(self, token: str) -> Dict[str, Any]:
+        """Get summary statistics of items grouped by status."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        items = self.storage.get_all()
+        status_counts: Dict[str, int] = {}
+        for item in items:
+            status = item.get("status", "unknown")
+            status_counts[status] = status_counts.get(status, 0) + 1
+            
+        return {
+            "total_items": len(items),
+            "status_breakdown": status_counts,
+            "status_code": 200,
+        }
+
+    def batch_update_status(self, token: str, item_ids: List[int], new_status: str) -> Dict[str, Any]:
+        """Update status for multiple items in a batch."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        updated_items = []
+        for item_id in item_ids:
+            item = self.storage.get_by_id(item_id)
+            if item:
+                updated = self.storage.update(item_id, {"status": new_status})
+                if updated:
+                    updated_items.append(updated)
+                    self.events.publish("item_status_updated", {"id": item_id, "new_status": new_status})
+                    
+        return {
+            "message": f"Updated status for {len(updated_items)} items",
+            "updated_count": len(updated_items),
+            "items": updated_items,
+            "status_code": 200,
+        }
+
+    def export_items(self, token: str, format_type: str = "json") -> Dict[str, Any]:
+        """Export all items formatted as json or csv string representation."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        items = self.storage.get_all()
+        if format_type.lower() == "csv":
+            csv_lines = ["id,name,status"]
+            for item in items:
+                csv_lines.append(f"{item.get('id')},{item.get('name')},{item.get('status')}")
+            exported_content = "\n".join(csv_lines)
+        else:
+            exported_content = items
+
+        return {
+            "format": format_type,
+            "count": len(items),
+            "data": exported_content,
+            "status_code": 200,
+        }
+
+    def clear_items(self, token: str) -> Dict[str, Any]:
+        """Remove all items from storage if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+        
+        count = self.storage.count()
+        self.storage.clear()
+        self.events.publish("items_cleared", {"cleared_count": count})
+        return {"message": f"Cleared {count} items", "cleared_count": count, "status_code": 200}
+
+
 
 if __name__ == "__main__":
     api = APIService()
