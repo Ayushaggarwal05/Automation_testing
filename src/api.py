@@ -13,6 +13,7 @@ try:
     from task_queue import task_queue
     from webhooks import webhooks
     from plugins import plugins
+    from notifications import notifications
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -23,6 +24,7 @@ except ImportError:
     from src.task_queue import task_queue
     from src.webhooks import webhooks
     from src.plugins import plugins
+    from src.notifications import notifications
 
 
 class APIService:
@@ -35,6 +37,7 @@ class APIService:
         self.task_queue = task_queue
         self.webhooks = webhooks
         self.plugins = plugins
+        self.notifications = notifications
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -291,6 +294,85 @@ class APIService:
         self.storage.clear()
         self.events.publish("items_cleared", {"cleared_count": count})
         return {"message": f"Cleared {count} items", "cleared_count": count, "status_code": 200}
+
+    def send_notification(
+        self,
+        token: str,
+        recipient: str,
+        message: str,
+        channel: str = "email",
+        priority: str = "normal",
+        subject: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Send a notification through supported channels if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            notification = self.notifications.send(
+                recipient=recipient,
+                message=message,
+                channel=channel,
+                priority=priority,
+                subject=subject,
+                metadata=metadata,
+            )
+            return {
+                "message": "Notification dispatched successfully",
+                "notification": notification.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def list_notifications(
+        self,
+        token: str,
+        channel: Optional[str] = None,
+        status: Optional[str] = None,
+        recipient: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """List dispatched notifications with optional filtering if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        notifs = self.notifications.list_notifications(
+            channel=channel, status=status, recipient=recipient, limit=limit
+        )
+        return {"notifications": notifs, "count": len(notifs), "status_code": 200}
+
+    def get_notification(self, token: str, notification_id: str) -> Dict[str, Any]:
+        """Retrieve a single notification by ID if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        notif = self.notifications.get_notification(notification_id)
+        if not notif:
+            return {"error": f"Notification '{notification_id}' not found", "status_code": 404}
+        return {"notification": notif.to_dict(), "status_code": 200}
+
+    def cancel_notification(self, token: str, notification_id: str) -> Dict[str, Any]:
+        """Cancel a notification if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        cancelled = self.notifications.cancel_notification(notification_id)
+        if not cancelled:
+            return {
+                "error": f"Notification '{notification_id}' could not be cancelled or does not exist",
+                "status_code": 404,
+            }
+        return {"message": f"Notification '{notification_id}' cancelled", "status_code": 200}
+
+    def get_notification_stats(self, token: str) -> Dict[str, Any]:
+        """Get aggregate delivery statistics for notifications if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.notifications.get_stats()
+        return {"stats": stats, "status_code": 200}
 
 
 

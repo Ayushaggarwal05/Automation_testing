@@ -182,7 +182,40 @@ class TestAPIService(unittest.TestCase):
         items_res = self.api.get_items(self.token)
         self.assertEqual(items_res["count"], 0)
 
+    def test_notification_endpoints(self):
+        # Send notification
+        send_res = self.api.send_notification(
+            self.token,
+            recipient="ops@example.com",
+            message="Deployment successful",
+            channel="slack",
+            priority="high",
+            subject="Deploy Alert",
+        )
+        self.assertEqual(send_res["status_code"], 201)
+        notif_id = send_res["notification"]["id"]
+
+        # List notifications
+        list_res = self.api.list_notifications(self.token, channel="slack")
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertGreaterEqual(list_res["count"], 1)
+
+        # Get notification
+        get_res = self.api.get_notification(self.token, notif_id)
+        self.assertEqual(get_res["status_code"], 200)
+        self.assertEqual(get_res["notification"]["recipient"], "ops@example.com")
+
+        # Cancel notification
+        cancel_res = self.api.cancel_notification(self.token, notif_id)
+        self.assertEqual(cancel_res["status_code"], 200)
+
+        # Get notification stats
+        stats_res = self.api.get_notification_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("total_notifications", stats_res["stats"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
