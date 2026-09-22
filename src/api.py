@@ -16,6 +16,7 @@ try:
     from notifications import notifications
     from workflows import workflows
     from audit import audit_logger
+    from feature_flags import feature_flags
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -29,6 +30,7 @@ except ImportError:
     from src.notifications import notifications
     from src.workflows import workflows
     from src.audit import audit_logger
+    from src.feature_flags import feature_flags
 
 
 class APIService:
@@ -44,6 +46,7 @@ class APIService:
         self.notifications = notifications
         self.workflows = workflows
         self.audit = audit_logger
+        self.flags = feature_flags
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -531,6 +534,101 @@ class APIService:
             return {"error": "Unauthorized", "status_code": 401}
 
         stats = self.audit.get_stats()
+        return {"stats": stats, "status_code": 200}
+
+    def create_feature_flag(
+        self,
+        token: str,
+        name: str,
+        description: str = "",
+        enabled: bool = False,
+        rollout_percentage: int = 100,
+        allowed_roles: Optional[List[str]] = None,
+        allowed_users: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Create a new feature flag definition if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            flag = self.flags.create_flag(
+                name=name,
+                description=description,
+                enabled=enabled,
+                rollout_percentage=rollout_percentage,
+                allowed_roles=allowed_roles,
+                allowed_users=allowed_users,
+                metadata=metadata,
+            )
+            return {
+                "message": "Feature flag created successfully",
+                "flag": flag.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def list_feature_flags(self, token: str, enabled_only: bool = False) -> Dict[str, Any]:
+        """List registered feature flags if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        flag_list = self.flags.list_flags(enabled_only=enabled_only)
+        return {"flags": flag_list, "count": len(flag_list), "status_code": 200}
+
+    def get_feature_flag(self, token: str, name: str) -> Dict[str, Any]:
+        """Retrieve a specific feature flag by name if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        flag = self.flags.get_flag(name)
+        if not flag:
+            return {"error": f"Feature flag '{name}' not found", "status_code": 404}
+        return {"flag": flag.to_dict(), "status_code": 200}
+
+    def evaluate_feature_flag(
+        self, token: str, name: str, user_context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Evaluate feature flag state for a user/request context if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        result = self.flags.evaluate(name, user_context=user_context)
+        return {"evaluation": result, "status_code": 200}
+
+    def toggle_feature_flag(
+        self, token: str, name: str, enabled: Optional[bool] = None
+    ) -> Dict[str, Any]:
+        """Toggle or update enabled state for a feature flag if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        flag = self.flags.toggle_flag(name, enabled=enabled)
+        if not flag:
+            return {"error": f"Feature flag '{name}' not found", "status_code": 404}
+        return {
+            "message": f"Feature flag '{name}' updated",
+            "flag": flag.to_dict(),
+            "status_code": 200,
+        }
+
+    def delete_feature_flag(self, token: str, name: str) -> Dict[str, Any]:
+        """Delete a feature flag if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        deleted = self.flags.delete_flag(name)
+        if not deleted:
+            return {"error": f"Feature flag '{name}' not found", "status_code": 404}
+        return {"message": f"Feature flag '{name}' deleted successfully", "status_code": 200}
+
+    def get_feature_flags_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve aggregated feature flags metrics if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.flags.get_stats()
         return {"stats": stats, "status_code": 200}
 
 

@@ -23,6 +23,8 @@ class AppConfig:
         self.workflow_execution_timeout_seconds: int = int(os.getenv("WORKFLOW_EXECUTION_TIMEOUT_SECONDS", "300"))
         self.audit_retention_days: int = int(os.getenv("AUDIT_RETENTION_DAYS", "90"))
         self.audit_tamper_protection_enabled: bool = os.getenv("AUDIT_TAMPER_PROTECTION_ENABLED", "true").lower() in ("true", "1", "yes")
+        self.feature_flags_default_enabled: bool = os.getenv("FEATURE_FLAGS_DEFAULT_ENABLED", "false").lower() in ("true", "1", "yes")
+        self.feature_flags_eval_cache_ttl: int = int(os.getenv("FEATURE_FLAGS_EVAL_CACHE_TTL", "60"))
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -38,6 +40,8 @@ class AppConfig:
             "workflow_execution_timeout_seconds": self.workflow_execution_timeout_seconds,
             "audit_retention_days": self.audit_retention_days,
             "audit_tamper_protection_enabled": self.audit_tamper_protection_enabled,
+            "feature_flags_default_enabled": self.feature_flags_default_enabled,
+            "feature_flags_eval_cache_ttl": self.feature_flags_eval_cache_ttl,
             "secret_key_configured": bool(self.secret_key),
         }
 

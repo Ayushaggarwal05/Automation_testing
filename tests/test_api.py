@@ -285,9 +285,54 @@ class TestAPIService(unittest.TestCase):
         self.assertEqual(stats_res["status_code"], 200)
         self.assertIn("total_records", stats_res["stats"])
 
+    def test_feature_flag_endpoints(self):
+        # Create flag
+        create_res = self.api.create_feature_flag(
+            self.token,
+            name="new_checkout_flow",
+            description="Next-gen checkout page",
+            enabled=True,
+            rollout_percentage=50,
+            allowed_roles=["admin", "beta_tester"],
+        )
+        self.assertEqual(create_res["status_code"], 201)
+        self.assertEqual(create_res["flag"]["name"], "new_checkout_flow")
+
+        # List flags
+        list_res = self.api.list_feature_flags(self.token)
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertGreaterEqual(list_res["count"], 1)
+
+        # Get flag
+        get_res = self.api.get_feature_flag(self.token, "new_checkout_flow")
+        self.assertEqual(get_res["status_code"], 200)
+        self.assertEqual(get_res["flag"]["description"], "Next-gen checkout page")
+
+        # Evaluate flag
+        eval_res = self.api.evaluate_feature_flag(
+            self.token, "new_checkout_flow", user_context={"role": "admin"}
+        )
+        self.assertEqual(eval_res["status_code"], 200)
+        self.assertTrue(eval_res["evaluation"]["enabled"])
+
+        # Toggle flag
+        toggle_res = self.api.toggle_feature_flag(self.token, "new_checkout_flow", enabled=False)
+        self.assertEqual(toggle_res["status_code"], 200)
+        self.assertFalse(toggle_res["flag"]["enabled"])
+
+        # Get stats
+        stats_res = self.api.get_feature_flags_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("total_flags", stats_res["stats"])
+
+        # Delete flag
+        del_res = self.api.delete_feature_flag(self.token, "new_checkout_flow")
+        self.assertEqual(del_res["status_code"], 200)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

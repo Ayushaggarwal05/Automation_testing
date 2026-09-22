@@ -24,6 +24,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertEqual(cfg.workflow_execution_timeout_seconds, 300)
         self.assertEqual(cfg.audit_retention_days, 90)
         self.assertTrue(cfg.audit_tamper_protection_enabled)
+        self.assertFalse(cfg.feature_flags_default_enabled)
+        self.assertEqual(cfg.feature_flags_eval_cache_ttl, 60)
 
     def test_to_dict_keys(self):
         cfg = AppConfig()
@@ -36,6 +38,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertIn("workflow_execution_timeout_seconds", d)
         self.assertIn("audit_retention_days", d)
         self.assertIn("audit_tamper_protection_enabled", d)
+        self.assertIn("feature_flags_default_enabled", d)
+        self.assertIn("feature_flags_eval_cache_ttl", d)
         self.assertIn("secret_key_configured", d)
 
 
