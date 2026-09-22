@@ -21,6 +21,7 @@ graph TD
         Store[(In-Memory Data Store)]
         Workflows[WorkflowEngine (src/workflows.py)]
         Audit[AuditLogManager (src/audit.py)]
+        Flags[FeatureFlagManager (src/feature_flags.py)]
         Events[Event Bus (src/events.py)]
     end
 
@@ -36,7 +37,9 @@ graph TD
     API -->|Read / Write| Store
     API -->|Manage & Execute| Workflows
     API -->|Record & Verify| Audit
+    API -->|Manage & Evaluate| Flags
     Workflows -->|Publish Events| Events
+    Flags -->|Publish Events| Events
 ```
 
 ---
@@ -93,6 +96,10 @@ sequenceDiagram
     - `log_audit_event(token, actor, action, ...)`: Record a tamper-evident audit record.
     - `list_audit_logs(token, ...)`: Query audit records with filtering options.
     - `verify_audit_integrity(token)`: Verify cryptographic hash chaining across the audit trail.
+  - **Feature Flag Management**:
+    - `create_feature_flag(token, name, ...)`: Define a new feature flag.
+    - `list_feature_flags(token)` / `get_feature_flag(token, flag_name)`: Retrieve feature flag definitions.
+    - `evaluate_feature_flag(token, flag_name, context)`: Evaluate flag status for a specific user or context.
 
 ### 3.2 Authentication Service (`src/auth.py`)
 - **Security Middleware**: Manages cryptographic token generation using `SHA-256` hashing with secret key and timestamps.
@@ -114,6 +121,11 @@ sequenceDiagram
 - **Tamper-Evident Security Log**: Maintains immutable compliance audit records using SHA-256 cryptographic hash chaining (`AuditRecord` and `AuditLogManager`).
 - **Integrity Validation**: Provides cryptographic verification of logs to detect unauthorized tampering or corruption.
 - **Configurable Retention**: Respects settings like `audit_retention_days` and `audit_tamper_protection_enabled`.
+
+### 3.6 Feature Flag Manager (`src/feature_flags.py`)
+- **Flag Control & Rollouts**: Manages feature toggles with percentage rollouts, user/role targeting, and caching rules.
+- **Deterministic Evaluation**: Evaluates flags based on contextual user data and cryptographic hashing.
+- **Event Publishing**: Publishes flag lifecycle events (`feature_flag_created`, `feature_flag_toggled`, etc.) to the internal event bus.
 
 ---
 
