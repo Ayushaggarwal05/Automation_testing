@@ -12,7 +12,8 @@ Welcome to the **Automation Testing** sample repository (v2.4.0). This repositor
 └── src/
     ├── api.py
     ├── auth.py
-    └── webhooks.py
+    ├── webhooks.py
+    └── workflows.py
 ```
 
 ## Getting Started
