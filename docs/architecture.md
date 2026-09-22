@@ -22,6 +22,7 @@ graph TD
         Workflows[WorkflowEngine (src/workflows.py)]
         Audit[AuditLogManager (src/audit.py)]
         Flags[FeatureFlagManager (src/feature_flags.py)]
+        Resilience[ResilienceManager (src/resilience.py)]
         Events[Event Bus (src/events.py)]
     end
 
@@ -38,8 +39,10 @@ graph TD
     API -->|Manage & Execute| Workflows
     API -->|Record & Verify| Audit
     API -->|Manage & Evaluate| Flags
+    API -->|Manage & Execute| Resilience
     Workflows -->|Publish Events| Events
     Flags -->|Publish Events| Events
+    Resilience -->|Publish Events| Events
 ```
 
 ---
@@ -100,6 +103,10 @@ sequenceDiagram
     - `create_feature_flag(token, name, ...)`: Define a new feature flag.
     - `list_feature_flags(token)` / `get_feature_flag(token, flag_name)`: Retrieve feature flag definitions.
     - `evaluate_feature_flag(token, flag_name, context)`: Evaluate flag status for a specific user or context.
+  - **Resilience & Circuit Breaker Management**:
+    - `create_circuit_breaker(token, name, ...)`: Register a new circuit breaker.
+    - `list_circuit_breakers(token)` / `get_circuit_breaker(token, name)`: Retrieve breaker state.
+    - `execute_with_circuit_breaker(token, name, ...)`: Execute an action under circuit breaker protection.
 
 ### 3.2 Authentication Service (`src/auth.py`)
 - **Security Middleware**: Manages cryptographic token generation using `SHA-256` hashing with secret key and timestamps.
@@ -126,6 +133,11 @@ sequenceDiagram
 - **Flag Control & Rollouts**: Manages feature toggles with percentage rollouts, user/role targeting, and caching rules.
 - **Deterministic Evaluation**: Evaluates flags based on contextual user data and cryptographic hashing.
 - **Event Publishing**: Publishes flag lifecycle events (`feature_flag_created`, `feature_flag_toggled`, etc.) to the internal event bus.
+
+### 3.7 Resilience Manager (`src/resilience.py`)
+- **Fault Tolerance & Isolation**: Implements circuit breaker state machines (`CLOSED`, `OPEN`, `HALF_OPEN`) to prevent cascading failures.
+- **Automatic Recovery**: Automatically transitions breakers to half-open state after recovery timeouts elapse.
+- **Event Publishing**: Publishes circuit breaker lifecycle events to the internal event bus.
 
 ---
 
