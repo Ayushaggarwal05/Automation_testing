@@ -13,7 +13,8 @@ Welcome to the **Automation Testing** sample repository (v2.4.0). This repositor
     ├── api.py
     ├── auth.py
     ├── webhooks.py
-    └── workflows.py
+    ├── workflows.py
+    └── audit.py
 ```
 
 ## Getting Started
@@ -40,6 +41,7 @@ python src/api.py
 - **Authentication Module**: Token generation, role-based access control, and validation mock utilities.
 - **REST API Service**: Endpoints for health checks (reporting service version 2.4.0), resource lookup, creation, status update, deletion, and webhook management.
 - **Webhook Management**: Register subscriptions, list active webhooks, and process event payloads with HMAC-SHA256 signatures.
+- **Audit Logging Module**: Tamper-evident, cryptographically chained audit logging with SHA-256 hash validation, compliance categorization, and integrity verification.
 - **Documentation**: Architectural overview and system diagrams.
 
 ## API Endpoints Summary
@@ -96,10 +98,3 @@ When events are dispatched to registered webhooks, payloads are signed to guaran
 ## License
 
 MIT License.
-
-## Automated Update: Feature updates require documentation synchronization.
-- Update relevant functional sections.
-
-## Automated Update: New subscription billing tiers and payment webhook flows introduced.
-- Document Pro and Enterprise subscription pricing plans
-- Add payment webhook ingestion flow and security verification
