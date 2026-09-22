@@ -19,6 +19,8 @@ graph TD
         API[APIService (src/api.py)]
         Auth[AuthService (src/auth.py)]
         Store[(In-Memory Data Store)]
+        Workflows[WorkflowEngine (src/workflows.py)]
+        Events[Event Bus (src/events.py)]
     end
 
     subgraph Quality Assurance
@@ -31,6 +33,8 @@ graph TD
     Tests -->|Validate| Auth
     API -->|Authenticate & Authorize| Auth
     API -->|Read / Write| Store
+    API -->|Manage & Execute| Workflows
+    Workflows -->|Publish Events| Events
 ```
 
 ---
@@ -78,6 +82,11 @@ sequenceDiagram
   - `add_item(token, item_name)`: Append new item with auto-incremented ID.
   - `update_item_status(token, item_id, new_status)`: Change item lifecycle state (`active`, `pending`, etc.).
   - `delete_item(token, item_id)`: Remove item by ID.
+  - **Workflow Management**:
+    - `create_workflow(token, name, steps, ...)`: Register a new automation workflow.
+    - `list_workflows(token)` / `get_workflow(token, workflow_id)`: Retrieve workflow definitions.
+    - `execute_workflow(token, workflow_id)`: Trigger synchronous execution of a workflow.
+    - `list_workflow_executions(token)` / `get_workflow_execution(token, execution_id)`: Track execution history.
 
 ### 3.2 Authentication Service (`src/auth.py`)
 - **Security Middleware**: Manages cryptographic token generation using `SHA-256` hashing with secret key and timestamps.
@@ -86,6 +95,14 @@ sequenceDiagram
 
 ### 3.3 Test & Verification Suite (`tests/test_api.py`)
 - Standardized `unittest` test suite covering authentication mechanics, permission checks, and full API endpoint workflows.
+
+### 3.4 Workflow Engine (`src/workflows.py`)
+- **Automation & Execution Pipeline**: Manages multi-step synchronous workflows (`Workflow`, `WorkflowStep`, `WorkflowExecution`).
+- **Configuration Limits**: Respects execution limits defined in `AppConfig` (such as `workflow_max_steps` and `workflow_execution_timeout_seconds`).
+- **Event-Driven Notifications**: Publishes lifecycle events to the internal event bus, including:
+  - `workflow_created` / `workflow_deleted`
+  - `workflow_execution_started`
+  - `workflow_execution_completed` / `workflow_execution_failed`
 
 ---
 
