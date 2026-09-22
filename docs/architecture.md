@@ -20,6 +20,7 @@ graph TD
         Auth[AuthService (src/auth.py)]
         Store[(In-Memory Data Store)]
         Workflows[WorkflowEngine (src/workflows.py)]
+        Audit[AuditLogManager (src/audit.py)]
         Events[Event Bus (src/events.py)]
     end
 
@@ -34,6 +35,7 @@ graph TD
     API -->|Authenticate & Authorize| Auth
     API -->|Read / Write| Store
     API -->|Manage & Execute| Workflows
+    API -->|Record & Verify| Audit
     Workflows -->|Publish Events| Events
 ```
 
@@ -87,6 +89,10 @@ sequenceDiagram
     - `list_workflows(token)` / `get_workflow(token, workflow_id)`: Retrieve workflow definitions.
     - `execute_workflow(token, workflow_id)`: Trigger synchronous execution of a workflow.
     - `list_workflow_executions(token)` / `get_workflow_execution(token, execution_id)`: Track execution history.
+  - **Audit Logging & Verification**:
+    - `log_audit_event(token, actor, action, ...)`: Record a tamper-evident audit record.
+    - `list_audit_logs(token, ...)`: Query audit records with filtering options.
+    - `verify_audit_integrity(token)`: Verify cryptographic hash chaining across the audit trail.
 
 ### 3.2 Authentication Service (`src/auth.py`)
 - **Security Middleware**: Manages cryptographic token generation using `SHA-256` hashing with secret key and timestamps.
@@ -103,6 +109,11 @@ sequenceDiagram
   - `workflow_created` / `workflow_deleted`
   - `workflow_execution_started`
   - `workflow_execution_completed` / `workflow_execution_failed`
+
+### 3.5 Audit Log Manager (`src/audit.py`)
+- **Tamper-Evident Security Log**: Maintains immutable compliance audit records using SHA-256 cryptographic hash chaining (`AuditRecord` and `AuditLogManager`).
+- **Integrity Validation**: Provides cryptographic verification of logs to detect unauthorized tampering or corruption.
+- **Configurable Retention**: Respects settings like `audit_retention_days` and `audit_tamper_protection_enabled`.
 
 ---
 
