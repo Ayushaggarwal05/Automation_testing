@@ -21,6 +21,8 @@ class AppConfig:
         self.notification_retry_limit: int = int(os.getenv("NOTIFICATION_RETRY_LIMIT", "3"))
         self.workflow_max_steps: int = int(os.getenv("WORKFLOW_MAX_STEPS", "20"))
         self.workflow_execution_timeout_seconds: int = int(os.getenv("WORKFLOW_EXECUTION_TIMEOUT_SECONDS", "300"))
+        self.audit_retention_days: int = int(os.getenv("AUDIT_RETENTION_DAYS", "90"))
+        self.audit_tamper_protection_enabled: bool = os.getenv("AUDIT_TAMPER_PROTECTION_ENABLED", "true").lower() in ("true", "1", "yes")
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -34,6 +36,8 @@ class AppConfig:
             "notification_retry_limit": self.notification_retry_limit,
             "workflow_max_steps": self.workflow_max_steps,
             "workflow_execution_timeout_seconds": self.workflow_execution_timeout_seconds,
+            "audit_retention_days": self.audit_retention_days,
+            "audit_tamper_protection_enabled": self.audit_tamper_protection_enabled,
             "secret_key_configured": bool(self.secret_key),
         }
 

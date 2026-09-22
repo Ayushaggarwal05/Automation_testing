@@ -252,9 +252,43 @@ class TestAPIService(unittest.TestCase):
         self.assertEqual(exec_detail["status_code"], 200)
         self.assertEqual(exec_detail["execution"]["id"], exec_id)
 
+    def test_audit_endpoints(self):
+        # Record audit event
+        log_res = self.api.log_audit_event(
+            self.token,
+            actor="admin_tester",
+            action="user_role_updated",
+            category="ADMIN",
+            severity="WARNING",
+            details={"target_user": "john_doe", "new_role": "admin"},
+        )
+        self.assertEqual(log_res["status_code"], 201)
+        self.assertIn("record_hash", log_res["record"])
+
+        # Query audit logs
+        query_res = self.api.query_audit_logs(self.token, category="ADMIN")
+        self.assertEqual(query_res["status_code"], 200)
+        self.assertGreaterEqual(query_res["count"], 1)
+
+        # Verify audit trail integrity
+        verify_res = self.api.verify_audit_trail(self.token)
+        self.assertEqual(verify_res["status_code"], 200)
+        self.assertTrue(verify_res["integrity"]["valid"])
+
+        # Export audit trail
+        export_res = self.api.export_audit_trail(self.token, format_type="json")
+        self.assertEqual(export_res["status_code"], 200)
+        self.assertGreaterEqual(export_res["export"]["count"], 1)
+
+        # Get audit stats
+        stats_res = self.api.get_audit_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("total_records", stats_res["stats"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

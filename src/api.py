@@ -15,6 +15,7 @@ try:
     from plugins import plugins
     from notifications import notifications
     from workflows import workflows
+    from audit import audit_logger
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -27,6 +28,7 @@ except ImportError:
     from src.plugins import plugins
     from src.notifications import notifications
     from src.workflows import workflows
+    from src.audit import audit_logger
 
 
 class APIService:
@@ -41,6 +43,7 @@ class APIService:
         self.plugins = plugins
         self.notifications = notifications
         self.workflows = workflows
+        self.audit = audit_logger
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -458,6 +461,77 @@ class APIService:
         if not execution:
             return {"error": f"Execution '{execution_id}' not found", "status_code": 404}
         return {"execution": execution.to_dict(), "status_code": 200}
+
+    def log_audit_event(
+        self,
+        token: str,
+        actor: str,
+        action: str,
+        category: str = "DATA_MUTATION",
+        severity: str = "INFO",
+        details: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Log a cryptographically chained immutable audit event if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            record = self.audit.record_event(
+                actor=actor,
+                action=action,
+                category=category,
+                severity=severity,
+                details=details,
+            )
+            return {
+                "message": "Audit event recorded successfully",
+                "record": record.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def query_audit_logs(
+        self,
+        token: str,
+        actor: Optional[str] = None,
+        category: Optional[str] = None,
+        severity: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Query tamper-evident audit records if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        logs = self.audit.query_logs(
+            actor=actor, category=category, severity=severity, limit=limit
+        )
+        return {"records": logs, "count": len(logs), "status_code": 200}
+
+    def verify_audit_trail(self, token: str) -> Dict[str, Any]:
+        """Verify the cryptographic integrity of the entire audit chain."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        result = self.audit.verify_integrity()
+        status_code = 200 if result.get("valid") else 409
+        return {"integrity": result, "status_code": status_code}
+
+    def export_audit_trail(self, token: str, format_type: str = "json") -> Dict[str, Any]:
+        """Export audit logs formatted as JSON or CSV if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        exported = self.audit.export_logs(format_type=format_type)
+        return {"export": exported, "status_code": 200}
+
+    def get_audit_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve aggregated audit log statistics if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.audit.get_stats()
+        return {"stats": stats, "status_code": 200}
 
 
 

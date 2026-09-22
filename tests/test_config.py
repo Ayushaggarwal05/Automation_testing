@@ -22,6 +22,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertEqual(cfg.notification_retry_limit, 3)
         self.assertEqual(cfg.workflow_max_steps, 20)
         self.assertEqual(cfg.workflow_execution_timeout_seconds, 300)
+        self.assertEqual(cfg.audit_retention_days, 90)
+        self.assertTrue(cfg.audit_tamper_protection_enabled)
 
     def test_to_dict_keys(self):
         cfg = AppConfig()
@@ -32,6 +34,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertIn("notification_retry_limit", d)
         self.assertIn("workflow_max_steps", d)
         self.assertIn("workflow_execution_timeout_seconds", d)
+        self.assertIn("audit_retention_days", d)
+        self.assertIn("audit_tamper_protection_enabled", d)
         self.assertIn("secret_key_configured", d)
 
 
