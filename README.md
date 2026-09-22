@@ -14,7 +14,8 @@ Welcome to the **Automation Testing** sample repository (v2.4.0). This repositor
     ├── auth.py
     ├── webhooks.py
     ├── workflows.py
-    └── audit.py
+    ├── audit.py
+    └── feature_flags.py
 ```
 
 ## Getting Started
@@ -42,6 +43,7 @@ python src/api.py
 - **REST API Service**: Endpoints for health checks (reporting service version 2.4.0), resource lookup, creation, status update, deletion, and webhook management.
 - **Webhook Management**: Register subscriptions, list active webhooks, and process event payloads with HMAC-SHA256 signatures.
 - **Audit Logging Module**: Tamper-evident, cryptographically chained audit logging with SHA-256 hash validation, compliance categorization, and integrity verification.
+- **Feature Flag Management**: Feature flags with percentage rollouts, user/role targeting, evaluation caching, and event publishing.
 - **Documentation**: Architectural overview and system diagrams.
 
 ## API Endpoints Summary
