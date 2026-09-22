@@ -20,6 +20,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertEqual(cfg.port, 8000)
         self.assertEqual(cfg.default_notification_channel, "email")
         self.assertEqual(cfg.notification_retry_limit, 3)
+        self.assertEqual(cfg.workflow_max_steps, 20)
+        self.assertEqual(cfg.workflow_execution_timeout_seconds, 300)
 
     def test_to_dict_keys(self):
         cfg = AppConfig()
@@ -28,6 +30,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertIn("app_env", d)
         self.assertIn("default_notification_channel", d)
         self.assertIn("notification_retry_limit", d)
+        self.assertIn("workflow_max_steps", d)
+        self.assertIn("workflow_execution_timeout_seconds", d)
         self.assertIn("secret_key_configured", d)
 
 

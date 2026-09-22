@@ -19,6 +19,8 @@ class AppConfig:
         self.token_expiry_seconds: int = int(os.getenv("TOKEN_EXPIRY_SECONDS", "3600"))
         self.default_notification_channel: str = os.getenv("DEFAULT_NOTIFICATION_CHANNEL", "email")
         self.notification_retry_limit: int = int(os.getenv("NOTIFICATION_RETRY_LIMIT", "3"))
+        self.workflow_max_steps: int = int(os.getenv("WORKFLOW_MAX_STEPS", "20"))
+        self.workflow_execution_timeout_seconds: int = int(os.getenv("WORKFLOW_EXECUTION_TIMEOUT_SECONDS", "300"))
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -30,6 +32,8 @@ class AppConfig:
             "token_expiry_seconds": self.token_expiry_seconds,
             "default_notification_channel": self.default_notification_channel,
             "notification_retry_limit": self.notification_retry_limit,
+            "workflow_max_steps": self.workflow_max_steps,
+            "workflow_execution_timeout_seconds": self.workflow_execution_timeout_seconds,
             "secret_key_configured": bool(self.secret_key),
         }
 

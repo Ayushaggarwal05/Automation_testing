@@ -214,8 +214,47 @@ class TestAPIService(unittest.TestCase):
         self.assertEqual(stats_res["status_code"], 200)
         self.assertIn("total_notifications", stats_res["stats"])
 
+    def test_workflow_endpoints(self):
+        steps = [
+            {"name": "Init Step", "action_type": "log", "params": {"message": "Pipeline init"}},
+            {"name": "Notify Ops", "action_type": "notification", "params": {"recipient": "alerts@example.com"}},
+        ]
+        # Create workflow
+        create_res = self.api.create_workflow(
+            self.token, name="CI Pipeline", steps=steps, description="Build & test flow"
+        )
+        self.assertEqual(create_res["status_code"], 201)
+        wf_id = create_res["workflow"]["id"]
+
+        # List workflows
+        list_res = self.api.list_workflows(self.token)
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertGreaterEqual(list_res["count"], 1)
+
+        # Get workflow
+        get_res = self.api.get_workflow(self.token, wf_id)
+        self.assertEqual(get_res["status_code"], 200)
+        self.assertEqual(get_res["workflow"]["name"], "CI Pipeline")
+
+        # Execute workflow
+        exec_res = self.api.execute_workflow(self.token, wf_id, context={"run_id": "run-123"})
+        self.assertEqual(exec_res["status_code"], 200)
+        exec_id = exec_res["execution"]["id"]
+        self.assertEqual(exec_res["execution"]["status"], "COMPLETED")
+
+        # List executions
+        execs_list = self.api.list_workflow_executions(self.token, workflow_id=wf_id)
+        self.assertEqual(execs_list["status_code"], 200)
+        self.assertGreaterEqual(execs_list["count"], 1)
+
+        # Get execution
+        exec_detail = self.api.get_workflow_execution(self.token, exec_id)
+        self.assertEqual(exec_detail["status_code"], 200)
+        self.assertEqual(exec_detail["execution"]["id"], exec_id)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

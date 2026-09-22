@@ -14,6 +14,7 @@ try:
     from webhooks import webhooks
     from plugins import plugins
     from notifications import notifications
+    from workflows import workflows
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -25,6 +26,7 @@ except ImportError:
     from src.webhooks import webhooks
     from src.plugins import plugins
     from src.notifications import notifications
+    from src.workflows import workflows
 
 
 class APIService:
@@ -38,6 +40,7 @@ class APIService:
         self.webhooks = webhooks
         self.plugins = plugins
         self.notifications = notifications
+        self.workflows = workflows
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -373,6 +376,88 @@ class APIService:
 
         stats = self.notifications.get_stats()
         return {"stats": stats, "status_code": 200}
+
+    def create_workflow(
+        self,
+        token: str,
+        name: str,
+        steps: List[Dict[str, Any]],
+        description: str = "",
+        trigger_event: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Create and register a new automation workflow if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            workflow = self.workflows.create_workflow(
+                name=name,
+                steps=steps,
+                description=description,
+                trigger_event=trigger_event,
+            )
+            return {
+                "message": "Workflow created successfully",
+                "workflow": workflow.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def list_workflows(self, token: str, enabled_only: bool = False) -> Dict[str, Any]:
+        """List registered workflows if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        wfs = self.workflows.list_workflows(enabled_only=enabled_only)
+        return {"workflows": wfs, "count": len(wfs), "status_code": 200}
+
+    def get_workflow(self, token: str, workflow_id: str) -> Dict[str, Any]:
+        """Fetch workflow definition by ID if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        wf = self.workflows.get_workflow(workflow_id)
+        if not wf:
+            return {"error": f"Workflow '{workflow_id}' not found", "status_code": 404}
+        return {"workflow": wf.to_dict(), "status_code": 200}
+
+    def execute_workflow(
+        self, token: str, workflow_id: str, context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Execute a workflow pipeline if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            execution = self.workflows.execute_workflow(workflow_id=workflow_id, context=context)
+            return {
+                "message": f"Workflow execution finished with status {execution.status}",
+                "execution": execution.to_dict(),
+                "status_code": 200 if execution.status == "COMPLETED" else 422,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 404}
+
+    def list_workflow_executions(
+        self, token: str, workflow_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """List past workflow execution runs if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        executions = self.workflows.list_executions(workflow_id=workflow_id)
+        return {"executions": executions, "count": len(executions), "status_code": 200}
+
+    def get_workflow_execution(self, token: str, execution_id: str) -> Dict[str, Any]:
+        """Retrieve execution run details by ID if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        execution = self.workflows.get_execution(execution_id)
+        if not execution:
+            return {"error": f"Execution '{execution_id}' not found", "status_code": 404}
+        return {"execution": execution.to_dict(), "status_code": 200}
 
 
 
