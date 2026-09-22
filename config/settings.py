@@ -25,6 +25,8 @@ class AppConfig:
         self.audit_tamper_protection_enabled: bool = os.getenv("AUDIT_TAMPER_PROTECTION_ENABLED", "true").lower() in ("true", "1", "yes")
         self.feature_flags_default_enabled: bool = os.getenv("FEATURE_FLAGS_DEFAULT_ENABLED", "false").lower() in ("true", "1", "yes")
         self.feature_flags_eval_cache_ttl: int = int(os.getenv("FEATURE_FLAGS_EVAL_CACHE_TTL", "60"))
+        self.circuit_breaker_failure_threshold: int = int(os.getenv("CIRCUIT_BREAKER_FAILURE_THRESHOLD", "5"))
+        self.circuit_breaker_recovery_timeout_seconds: float = float(os.getenv("CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SECONDS", "30.0"))
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -42,6 +44,8 @@ class AppConfig:
             "audit_tamper_protection_enabled": self.audit_tamper_protection_enabled,
             "feature_flags_default_enabled": self.feature_flags_default_enabled,
             "feature_flags_eval_cache_ttl": self.feature_flags_eval_cache_ttl,
+            "circuit_breaker_failure_threshold": self.circuit_breaker_failure_threshold,
+            "circuit_breaker_recovery_timeout_seconds": self.circuit_breaker_recovery_timeout_seconds,
             "secret_key_configured": bool(self.secret_key),
         }
 

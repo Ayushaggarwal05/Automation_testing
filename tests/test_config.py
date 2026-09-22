@@ -26,6 +26,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertTrue(cfg.audit_tamper_protection_enabled)
         self.assertFalse(cfg.feature_flags_default_enabled)
         self.assertEqual(cfg.feature_flags_eval_cache_ttl, 60)
+        self.assertEqual(cfg.circuit_breaker_failure_threshold, 5)
+        self.assertEqual(cfg.circuit_breaker_recovery_timeout_seconds, 30.0)
 
     def test_to_dict_keys(self):
         cfg = AppConfig()
@@ -40,6 +42,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertIn("audit_tamper_protection_enabled", d)
         self.assertIn("feature_flags_default_enabled", d)
         self.assertIn("feature_flags_eval_cache_ttl", d)
+        self.assertIn("circuit_breaker_failure_threshold", d)
+        self.assertIn("circuit_breaker_recovery_timeout_seconds", d)
         self.assertIn("secret_key_configured", d)
 
 

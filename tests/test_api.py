@@ -329,9 +329,54 @@ class TestAPIService(unittest.TestCase):
         del_res = self.api.delete_feature_flag(self.token, "new_checkout_flow")
         self.assertEqual(del_res["status_code"], 200)
 
+    def test_resilience_endpoints(self):
+        # Register circuit breaker
+        create_res = self.api.create_circuit_breaker(
+            self.token,
+            name="external_auth_provider",
+            failure_threshold=3,
+            recovery_timeout_seconds=10.0,
+        )
+        self.assertEqual(create_res["status_code"], 201)
+        self.assertEqual(create_res["circuit"]["name"], "external_auth_provider")
+
+        # List circuit breakers
+        list_res = self.api.list_circuit_breakers(self.token)
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertGreaterEqual(list_res["count"], 1)
+
+        # Get circuit breaker
+        get_res = self.api.get_circuit_breaker(self.token, "external_auth_provider")
+        self.assertEqual(get_res["status_code"], 200)
+        self.assertEqual(get_res["circuit"]["state"], "CLOSED")
+
+        # Execute with circuit breaker
+        exec_res = self.api.execute_with_circuit_breaker(
+            self.token,
+            name="external_auth_provider",
+            action_name="echo",
+            payload={"message": "ping"},
+        )
+        self.assertEqual(exec_res["status_code"], 200)
+        self.assertEqual(exec_res["execution"]["status"], "SUCCESS")
+
+        # Trip circuit
+        trip_res = self.api.trip_circuit_breaker(self.token, "external_auth_provider")
+        self.assertEqual(trip_res["status_code"], 200)
+
+        # Reset circuit
+        reset_res = self.api.reset_circuit_breaker(self.token, "external_auth_provider")
+        self.assertEqual(reset_res["status_code"], 200)
+
+        # Get resilience stats
+        stats_res = self.api.get_resilience_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("total_circuits", stats_res["stats"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

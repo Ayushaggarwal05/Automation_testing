@@ -17,6 +17,7 @@ try:
     from workflows import workflows
     from audit import audit_logger
     from feature_flags import feature_flags
+    from resilience import resilience
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -31,6 +32,7 @@ except ImportError:
     from src.workflows import workflows
     from src.audit import audit_logger
     from src.feature_flags import feature_flags
+    from src.resilience import resilience
 
 
 class APIService:
@@ -47,6 +49,7 @@ class APIService:
         self.workflows = workflows
         self.audit = audit_logger
         self.flags = feature_flags
+        self.resilience = resilience
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -629,6 +632,103 @@ class APIService:
             return {"error": "Unauthorized", "status_code": 401}
 
         stats = self.flags.get_stats()
+        return {"stats": stats, "status_code": 200}
+
+    def create_circuit_breaker(
+        self,
+        token: str,
+        name: str,
+        failure_threshold: int = 5,
+        recovery_timeout_seconds: float = 30.0,
+        half_open_success_threshold: int = 2,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Register a new circuit breaker for resilience management if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            circuit = self.resilience.create_circuit(
+                name=name,
+                failure_threshold=failure_threshold,
+                recovery_timeout_seconds=recovery_timeout_seconds,
+                half_open_success_threshold=half_open_success_threshold,
+                metadata=metadata,
+            )
+            return {
+                "message": "Circuit breaker registered successfully",
+                "circuit": circuit.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def list_circuit_breakers(self, token: str) -> Dict[str, Any]:
+        """List all circuit breakers and their real-time state if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        circuits = self.resilience.list_circuits()
+        return {"circuits": circuits, "count": len(circuits), "status_code": 200}
+
+    def get_circuit_breaker(self, token: str, name: str) -> Dict[str, Any]:
+        """Retrieve a specific circuit breaker by name if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        circuit = self.resilience.get_circuit(name)
+        if not circuit:
+            return {"error": f"Circuit breaker '{name}' not found", "status_code": 404}
+        return {"circuit": circuit.to_dict(), "status_code": 200}
+
+    def trip_circuit_breaker(
+        self, token: str, name: str, reason: str = "Manual intervention"
+    ) -> Dict[str, Any]:
+        """Manually trip a circuit breaker to OPEN if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        tripped = self.resilience.trip_circuit(name, reason=reason)
+        if not tripped:
+            return {"error": f"Circuit breaker '{name}' not found", "status_code": 404}
+        return {"message": f"Circuit breaker '{name}' tripped to OPEN", "status_code": 200}
+
+    def reset_circuit_breaker(self, token: str, name: str) -> Dict[str, Any]:
+        """Manually reset a circuit breaker to CLOSED if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        reset_ok = self.resilience.reset_circuit(name)
+        if not reset_ok:
+            return {"error": f"Circuit breaker '{name}' not found", "status_code": 404}
+        return {"message": f"Circuit breaker '{name}' reset to CLOSED", "status_code": 200}
+
+    def execute_with_circuit_breaker(
+        self,
+        token: str,
+        name: str,
+        action_name: str,
+        payload: Optional[Dict[str, Any]] = None,
+        fallback_value: Any = None,
+    ) -> Dict[str, Any]:
+        """Execute protected action through circuit breaker if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            result = self.resilience.execute(
+                name=name, action_name=action_name, payload=payload, fallback_value=fallback_value
+            )
+            return {"execution": result, "status_code": 200}
+        except ValueError as e:
+            return {"error": str(e), "status_code": 404}
+
+    def get_resilience_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve aggregated resilience stats if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.resilience.get_stats()
         return {"stats": stats, "status_code": 200}
 
 
