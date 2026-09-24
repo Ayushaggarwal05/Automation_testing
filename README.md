@@ -16,7 +16,8 @@ Welcome to the **Automation Testing** sample repository (v2.4.0). This repositor
     ├── workflows.py
     ├── audit.py
     ├── feature_flags.py
-    └── resilience.py
+    ├── resilience.py
+    └── vault.py
 ```
 
 ## Getting Started
@@ -46,6 +47,7 @@ python src/api.py
 - **Audit Logging Module**: Tamper-evident, cryptographically chained audit logging with SHA-256 hash validation, compliance categorization, and integrity verification.
 - **Feature Flag Management**: Feature flags with percentage rollouts, user/role targeting, evaluation caching, and event publishing.
 - **Resilience Module**: Circuit breaker state machines, automatic failure isolation, fallback handlers, and resilience management.
+- **Vault Module**: Encrypted secret storage, versioning, rotation policies, TTL expiration, access control, and event publishing.
 - **Documentation**: Architectural overview and system diagrams.
 
 ## API Endpoints Summary
