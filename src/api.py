@@ -18,6 +18,7 @@ try:
     from audit import audit_logger
     from feature_flags import feature_flags
     from resilience import resilience
+    from vault import vault
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -33,6 +34,7 @@ except ImportError:
     from src.audit import audit_logger
     from src.feature_flags import feature_flags
     from src.resilience import resilience
+    from src.vault import vault
 
 
 class APIService:
@@ -50,6 +52,7 @@ class APIService:
         self.audit = audit_logger
         self.flags = feature_flags
         self.resilience = resilience
+        self.vault = vault
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -729,6 +732,94 @@ class APIService:
             return {"error": "Unauthorized", "status_code": 401}
 
         stats = self.resilience.get_stats()
+        return {"stats": stats, "status_code": 200}
+
+    def store_secret(
+        self,
+        token: str,
+        name: str,
+        value: str,
+        description: str = "",
+        tags: Optional[List[str]] = None,
+        ttl_seconds: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Store an encrypted secret in the vault if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            actor = self.auth_service.get_user_from_token(token) or "authorized_user"
+            entry = self.vault.store_secret(
+                name=name,
+                value=value,
+                description=description,
+                tags=tags,
+                ttl_seconds=ttl_seconds,
+                actor=actor,
+            )
+            return {
+                "message": "Secret stored securely in vault",
+                "secret": entry.to_dict(mask_value=True),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def get_secret(
+        self, token: str, name: str, reveal: bool = False, version: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Retrieve a secret by name, with optional plaintext reveal if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        result = self.vault.get_secret(name=name, reveal=reveal, version=version)
+        if not result.get("found"):
+            return {"error": result.get("error"), "status_code": 404}
+        return {"secret": result, "status_code": 200}
+
+    def rotate_secret(self, token: str, name: str, new_value: str) -> Dict[str, Any]:
+        """Rotate an existing secret to a new version if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            actor = self.auth_service.get_user_from_token(token) or "authorized_user"
+            entry = self.vault.rotate_secret(name=name, new_value=new_value, actor=actor)
+            return {
+                "message": f"Secret '{name}' rotated to version {entry.current_version}",
+                "secret": entry.to_dict(mask_value=True),
+                "status_code": 200,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def revoke_secret(self, token: str, name: str) -> Dict[str, Any]:
+        """Revoke a secret in the vault if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        actor = self.auth_service.get_user_from_token(token) or "authorized_user"
+        revoked = self.vault.revoke_secret(name=name, actor=actor)
+        if not revoked:
+            return {"error": f"Secret '{name}' not found or already revoked", "status_code": 404}
+        return {"message": f"Secret '{name}' revoked successfully", "status_code": 200}
+
+    def list_secrets(
+        self, token: str, tag_filter: Optional[str] = None, include_revoked: bool = False
+    ) -> Dict[str, Any]:
+        """List secrets in the vault with masked values if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        secrets_list = self.vault.list_secrets(tag_filter=tag_filter, include_revoked=include_revoked)
+        return {"secrets": secrets_list, "count": len(secrets_list), "status_code": 200}
+
+    def get_vault_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve aggregated vault statistics if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.vault.get_stats()
         return {"stats": stats, "status_code": 200}
 
 

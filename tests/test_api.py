@@ -373,9 +373,50 @@ class TestAPIService(unittest.TestCase):
         self.assertEqual(stats_res["status_code"], 200)
         self.assertIn("total_circuits", stats_res["stats"])
 
+    def test_vault_endpoints(self):
+        # Store secret
+        store_res = self.api.store_secret(
+            self.token,
+            name="sendgrid_api_key",
+            value="SG.abcdef123456",
+            description="SendGrid transactional email key",
+            tags=["email", "notifications"],
+        )
+        self.assertEqual(store_res["status_code"], 201)
+        self.assertEqual(store_res["secret"]["name"], "sendgrid_api_key")
+
+        # List secrets (masked)
+        list_res = self.api.list_secrets(self.token)
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertGreaterEqual(list_res["count"], 1)
+
+        # Get secret masked
+        get_res = self.api.get_secret(self.token, "sendgrid_api_key", reveal=False)
+        self.assertEqual(get_res["status_code"], 200)
+        self.assertEqual(get_res["secret"]["value"], "********")
+
+        # Get secret revealed
+        reveal_res = self.api.get_secret(self.token, "sendgrid_api_key", reveal=True)
+        self.assertEqual(reveal_res["status_code"], 200)
+        self.assertEqual(reveal_res["secret"]["value"], "SG.abcdef123456")
+
+        # Rotate secret
+        rotate_res = self.api.rotate_secret(self.token, "sendgrid_api_key", "SG.newsecret999")
+        self.assertEqual(rotate_res["status_code"], 200)
+
+        # Get vault stats
+        stats_res = self.api.get_vault_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("total_secrets", stats_res["stats"])
+
+        # Revoke secret
+        revoke_res = self.api.revoke_secret(self.token, "sendgrid_api_key")
+        self.assertEqual(revoke_res["status_code"], 200)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

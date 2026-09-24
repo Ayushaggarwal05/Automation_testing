@@ -28,6 +28,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertEqual(cfg.feature_flags_eval_cache_ttl, 60)
         self.assertEqual(cfg.circuit_breaker_failure_threshold, 5)
         self.assertEqual(cfg.circuit_breaker_recovery_timeout_seconds, 30.0)
+        self.assertEqual(cfg.vault_encryption_algorithm, "AES-256-GCM")
+        self.assertEqual(cfg.vault_default_ttl_seconds, 86400)
 
     def test_to_dict_keys(self):
         cfg = AppConfig()
@@ -44,6 +46,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertIn("feature_flags_eval_cache_ttl", d)
         self.assertIn("circuit_breaker_failure_threshold", d)
         self.assertIn("circuit_breaker_recovery_timeout_seconds", d)
+        self.assertIn("vault_encryption_algorithm", d)
+        self.assertIn("vault_default_ttl_seconds", d)
         self.assertIn("secret_key_configured", d)
 
 

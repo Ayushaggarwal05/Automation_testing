@@ -27,6 +27,8 @@ class AppConfig:
         self.feature_flags_eval_cache_ttl: int = int(os.getenv("FEATURE_FLAGS_EVAL_CACHE_TTL", "60"))
         self.circuit_breaker_failure_threshold: int = int(os.getenv("CIRCUIT_BREAKER_FAILURE_THRESHOLD", "5"))
         self.circuit_breaker_recovery_timeout_seconds: float = float(os.getenv("CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SECONDS", "30.0"))
+        self.vault_encryption_algorithm: str = os.getenv("VAULT_ENCRYPTION_ALGORITHM", "AES-256-GCM")
+        self.vault_default_ttl_seconds: int = int(os.getenv("VAULT_DEFAULT_TTL_SECONDS", "86400"))
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -46,6 +48,8 @@ class AppConfig:
             "feature_flags_eval_cache_ttl": self.feature_flags_eval_cache_ttl,
             "circuit_breaker_failure_threshold": self.circuit_breaker_failure_threshold,
             "circuit_breaker_recovery_timeout_seconds": self.circuit_breaker_recovery_timeout_seconds,
+            "vault_encryption_algorithm": self.vault_encryption_algorithm,
+            "vault_default_ttl_seconds": self.vault_default_ttl_seconds,
             "secret_key_configured": bool(self.secret_key),
         }
 
