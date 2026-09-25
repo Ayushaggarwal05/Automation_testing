@@ -24,6 +24,7 @@ graph TD
         Flags[FeatureFlagManager (src/feature_flags.py)]
         Resilience[ResilienceManager (src/resilience.py)]
         Scheduler[SchedulerEngine (src/scheduler.py)]
+        Analytics[AnalyticsEngine (src/analytics.py)]
         Events[Event Bus (src/events.py)]
     end
 
@@ -42,10 +43,12 @@ graph TD
     API -->|Manage & Evaluate| Flags
     API -->|Manage & Execute| Resilience
     API -->|Manage & Trigger| Scheduler
+    API -->|Ingest & Query| Analytics
     Workflows -->|Publish Events| Events
     Flags -->|Publish Events| Events
     Resilience -->|Publish Events| Events
     Scheduler -->|Publish Events| Events
+    Analytics -->|Publish Events| Events
 ```
 
 ---
@@ -117,6 +120,13 @@ sequenceDiagram
     - `trigger_job(token, job_id)`: Manually trigger job execution.
     - `cancel_job(token, job_id)`: Cancel scheduled jobs.
     - `list_job_executions(token)`: Track job execution history.
+  - **Analytics & Telemetry**:
+    - `record_analytics_metric(token, metric_name, value, ...)`: Ingest a time-series metric data point.
+    - `get_metric_series(token, metric_name, ...)`: Retrieve metric data points over a time range.
+    - `list_analytics_metrics(token)`: List all recorded metric names.
+    - `track_funnel_step(token, funnel_name, step_name, ...)`: Track user conversion funnel progression.
+    - `get_funnel_report(token, funnel_name)`: Calculate funnel conversion and drop-off rates.
+    - `get_analytics_stats(token)`: Retrieve aggregate statistics and engine status.
 
 ### 3.2 Authentication Service (`src/auth.py`)
 - **Security Middleware**: Manages cryptographic token generation using `SHA-256` hashing with secret key and timestamps.
@@ -154,6 +164,11 @@ sequenceDiagram
 - **Job Control**: Supports registration, pausing, resuming, triggering, and cancellation of jobs.
 - **Event Publishing**: Publishes scheduler lifecycle events to the internal event bus.
 
+### 3.9 Analytics Engine (`src/analytics.py`)
+- **Telemetry & Time-Series Aggregation**: Ingests and aggregates telemetry data points (`MetricDataPoint`, `AnalyticsEngine`) with support for avg, sum, count, min, and max aggregations.
+- **Funnel Tracking**: Tracks user progression steps through conversion funnels and generates detailed step-by-step conversion and drop-off reports.
+- **Event Publishing**: Publishes analytics lifecycle events to the internal event bus.
+
 ---
 
 ## 4. CI/CD & Automation Workflow
@@ -162,15 +177,4 @@ The repository includes native GitHub Actions integration:
 
 ```mermaid
 graph LR
-    Push[Git Push to main] --> Trigger[Workflow: ci.yml]
-    PR[Pull Request to main] --> Trigger
-    Trigger --> Setup[Setup Python 3.11]
-    Setup --> RunTests[Run unittest discover]
-    RunTests --> Result{Status Check}
-    Result -->|Pass| Success[Green Build ✔]
-    Result -->|Fail| Fail[Red Build ✖]
-```
-
-- **Trigger Events**: `push` and `pull_request` on `main` branch.
-- **Runner Environment**: Ubuntu latest, Python 3.11.
-- **Execution Target**: `python -m unittest discover -s tests`.
+    P

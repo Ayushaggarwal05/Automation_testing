@@ -18,7 +18,8 @@ Welcome to the **Automation Testing** sample repository (v2.4.0). This repositor
     ├── feature_flags.py
     ├── resilience.py
     ├── vault.py
-    └── scheduler.py
+    ├── scheduler.py
+    └── analytics.py
 ```
 
 ## Getting Started
@@ -50,6 +51,7 @@ python src/api.py
 - **Resilience Module**: Circuit breaker state machines, automatic failure isolation, fallback handlers, and resilience management.
 - **Vault Module**: Encrypted secret storage, versioning, rotation policies, TTL expiration, access control, and event publishing.
 - **Scheduler Module**: Background task scheduling, cron triggers, execution history tracking, and task management.
+- **Analytics Module**: Time-series telemetry aggregation, metric ingestion, and funnel tracking with reporting.
 - **Documentation**: Architectural overview and system diagrams.
 
 ## API Endpoints Summary
