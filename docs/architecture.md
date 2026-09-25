@@ -23,6 +23,7 @@ graph TD
         Audit[AuditLogManager (src/audit.py)]
         Flags[FeatureFlagManager (src/feature_flags.py)]
         Resilience[ResilienceManager (src/resilience.py)]
+        Scheduler[SchedulerEngine (src/scheduler.py)]
         Events[Event Bus (src/events.py)]
     end
 
@@ -40,9 +41,11 @@ graph TD
     API -->|Record & Verify| Audit
     API -->|Manage & Evaluate| Flags
     API -->|Manage & Execute| Resilience
+    API -->|Manage & Trigger| Scheduler
     Workflows -->|Publish Events| Events
     Flags -->|Publish Events| Events
     Resilience -->|Publish Events| Events
+    Scheduler -->|Publish Events| Events
 ```
 
 ---
@@ -107,6 +110,13 @@ sequenceDiagram
     - `create_circuit_breaker(token, name, ...)`: Register a new circuit breaker.
     - `list_circuit_breakers(token)` / `get_circuit_breaker(token, name)`: Retrieve breaker state.
     - `execute_with_circuit_breaker(token, name, ...)`: Execute an action under circuit breaker protection.
+  - **Background Task Scheduling**:
+    - `schedule_job(token, name, target_action, ...)`: Schedule recurring or cron-based tasks.
+    - `list_scheduled_jobs(token)` / `get_scheduled_job(token, job_id)`: Retrieve job configurations.
+    - `pause_job(token, job_id)` / `resume_job(token, job_id)`: Control job execution state.
+    - `trigger_job(token, job_id)`: Manually trigger job execution.
+    - `cancel_job(token, job_id)`: Cancel scheduled jobs.
+    - `list_job_executions(token)`: Track job execution history.
 
 ### 3.2 Authentication Service (`src/auth.py`)
 - **Security Middleware**: Manages cryptographic token generation using `SHA-256` hashing with secret key and timestamps.
@@ -138,6 +148,11 @@ sequenceDiagram
 - **Fault Tolerance & Isolation**: Implements circuit breaker state machines (`CLOSED`, `OPEN`, `HALF_OPEN`) to prevent cascading failures.
 - **Automatic Recovery**: Automatically transitions breakers to half-open state after recovery timeouts elapse.
 - **Event Publishing**: Publishes circuit breaker lifecycle events to the internal event bus.
+
+### 3.8 Scheduler Engine (`src/scheduler.py`)
+- **Background Task Scheduling**: Manages recurring and cron-triggered background tasks (`SchedulerEngine`, `ScheduledJob`, `JobExecutionRecord`).
+- **Job Control**: Supports registration, pausing, resuming, triggering, and cancellation of jobs.
+- **Event Publishing**: Publishes scheduler lifecycle events to the internal event bus.
 
 ---
 
