@@ -413,9 +413,54 @@ class TestAPIService(unittest.TestCase):
         revoke_res = self.api.revoke_secret(self.token, "sendgrid_api_key")
         self.assertEqual(revoke_res["status_code"], 200)
 
+    def test_scheduler_endpoints(self):
+        # Schedule job
+        sched_res = self.api.schedule_job(
+            self.token,
+            name="metrics_cleanup_job",
+            target_action="data_cleanup",
+            interval_seconds=120,
+            payload={"target": "old_logs"},
+        )
+        self.assertEqual(sched_res["status_code"], 201)
+        job_id = sched_res["job"]["id"]
+
+        # List jobs
+        list_res = self.api.list_scheduled_jobs(self.token)
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertGreaterEqual(list_res["count"], 1)
+
+        # Get job
+        get_res = self.api.get_scheduled_job(self.token, job_id)
+        self.assertEqual(get_res["status_code"], 200)
+        self.assertEqual(get_res["job"]["name"], "metrics_cleanup_job")
+
+        # Trigger job
+        trig_res = self.api.trigger_scheduled_job(self.token, job_id)
+        self.assertEqual(trig_res["status_code"], 200)
+        self.assertEqual(trig_res["execution"]["status"], "COMPLETED")
+
+        # Pause job
+        pause_res = self.api.pause_scheduled_job(self.token, job_id)
+        self.assertEqual(pause_res["status_code"], 200)
+
+        # Resume job
+        resume_res = self.api.resume_scheduled_job(self.token, job_id)
+        self.assertEqual(resume_res["status_code"], 200)
+
+        # Get stats
+        stats_res = self.api.get_scheduler_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("total_jobs", stats_res["stats"])
+
+        # Cancel job
+        cancel_res = self.api.cancel_scheduled_job(self.token, job_id)
+        self.assertEqual(cancel_res["status_code"], 200)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

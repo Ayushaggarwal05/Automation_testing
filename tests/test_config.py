@@ -30,6 +30,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertEqual(cfg.circuit_breaker_recovery_timeout_seconds, 30.0)
         self.assertEqual(cfg.vault_encryption_algorithm, "AES-256-GCM")
         self.assertEqual(cfg.vault_default_ttl_seconds, 86400)
+        self.assertEqual(cfg.scheduler_max_concurrent_jobs, 10)
+        self.assertEqual(cfg.scheduler_tick_interval_seconds, 1)
 
     def test_to_dict_keys(self):
         cfg = AppConfig()
@@ -48,6 +50,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertIn("circuit_breaker_recovery_timeout_seconds", d)
         self.assertIn("vault_encryption_algorithm", d)
         self.assertIn("vault_default_ttl_seconds", d)
+        self.assertIn("scheduler_max_concurrent_jobs", d)
+        self.assertIn("scheduler_tick_interval_seconds", d)
         self.assertIn("secret_key_configured", d)
 
 

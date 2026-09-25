@@ -29,6 +29,8 @@ class AppConfig:
         self.circuit_breaker_recovery_timeout_seconds: float = float(os.getenv("CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SECONDS", "30.0"))
         self.vault_encryption_algorithm: str = os.getenv("VAULT_ENCRYPTION_ALGORITHM", "AES-256-GCM")
         self.vault_default_ttl_seconds: int = int(os.getenv("VAULT_DEFAULT_TTL_SECONDS", "86400"))
+        self.scheduler_max_concurrent_jobs: int = int(os.getenv("SCHEDULER_MAX_CONCURRENT_JOBS", "10"))
+        self.scheduler_tick_interval_seconds: int = int(os.getenv("SCHEDULER_TICK_INTERVAL_SECONDS", "1"))
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -50,6 +52,8 @@ class AppConfig:
             "circuit_breaker_recovery_timeout_seconds": self.circuit_breaker_recovery_timeout_seconds,
             "vault_encryption_algorithm": self.vault_encryption_algorithm,
             "vault_default_ttl_seconds": self.vault_default_ttl_seconds,
+            "scheduler_max_concurrent_jobs": self.scheduler_max_concurrent_jobs,
+            "scheduler_tick_interval_seconds": self.scheduler_tick_interval_seconds,
             "secret_key_configured": bool(self.secret_key),
         }
 

@@ -19,6 +19,7 @@ try:
     from feature_flags import feature_flags
     from resilience import resilience
     from vault import vault
+    from scheduler import scheduler
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -35,6 +36,7 @@ except ImportError:
     from src.feature_flags import feature_flags
     from src.resilience import resilience
     from src.vault import vault
+    from src.scheduler import scheduler
 
 
 class APIService:
@@ -53,6 +55,7 @@ class APIService:
         self.flags = feature_flags
         self.resilience = resilience
         self.vault = vault
+        self.scheduler = scheduler
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -820,6 +823,108 @@ class APIService:
             return {"error": "Unauthorized", "status_code": 401}
 
         stats = self.vault.get_stats()
+        return {"stats": stats, "status_code": 200}
+
+    def schedule_job(
+        self,
+        token: str,
+        name: str,
+        target_action: str,
+        interval_seconds: int = 60,
+        cron_expression: Optional[str] = None,
+        payload: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Schedule a recurring or cron-based background task if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            job = self.scheduler.schedule_job(
+                name=name,
+                target_action=target_action,
+                interval_seconds=interval_seconds,
+                cron_expression=cron_expression,
+                payload=payload,
+                metadata=metadata,
+            )
+            return {
+                "message": "Job scheduled successfully",
+                "job": job.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def list_scheduled_jobs(self, token: str, enabled_only: bool = False) -> Dict[str, Any]:
+        """List scheduled jobs and their execution metadata if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        jobs = self.scheduler.list_jobs(enabled_only=enabled_only)
+        return {"jobs": jobs, "count": len(jobs), "status_code": 200}
+
+    def get_scheduled_job(self, token: str, job_id: str) -> Dict[str, Any]:
+        """Retrieve a specific scheduled job by ID if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        job = self.scheduler.get_job(job_id)
+        if not job:
+            return {"error": f"Scheduled job '{job_id}' not found", "status_code": 404}
+        return {"job": job.to_dict(), "status_code": 200}
+
+    def pause_scheduled_job(self, token: str, job_id: str) -> Dict[str, Any]:
+        """Pause a scheduled job if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        paused = self.scheduler.pause_job(job_id)
+        if not paused:
+            return {"error": f"Job '{job_id}' could not be paused or not found", "status_code": 404}
+        return {"message": f"Job '{job_id}' paused successfully", "status_code": 200}
+
+    def resume_scheduled_job(self, token: str, job_id: str) -> Dict[str, Any]:
+        """Resume a paused scheduled job if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        resumed = self.scheduler.resume_job(job_id)
+        if not resumed:
+            return {"error": f"Job '{job_id}' is not in PAUSED state or not found", "status_code": 404}
+        return {"message": f"Job '{job_id}' resumed successfully", "status_code": 200}
+
+    def trigger_scheduled_job(self, token: str, job_id: str) -> Dict[str, Any]:
+        """Manually trigger immediate execution of a scheduled job if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            record = self.scheduler.trigger_now(job_id)
+            return {
+                "message": f"Job '{job_id}' executed with status {record.status}",
+                "execution": record.to_dict(),
+                "status_code": 200 if record.status == "COMPLETED" else 422,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 404}
+
+    def cancel_scheduled_job(self, token: str, job_id: str) -> Dict[str, Any]:
+        """Cancel a scheduled job if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        cancelled = self.scheduler.cancel_job(job_id)
+        if not cancelled:
+            return {"error": f"Job '{job_id}' not found or already cancelled", "status_code": 404}
+        return {"message": f"Job '{job_id}' cancelled successfully", "status_code": 200}
+
+    def get_scheduler_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve aggregated scheduler metrics if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.scheduler.get_stats()
         return {"stats": stats, "status_code": 200}
 
 
