@@ -31,6 +31,8 @@ class AppConfig:
         self.vault_default_ttl_seconds: int = int(os.getenv("VAULT_DEFAULT_TTL_SECONDS", "86400"))
         self.scheduler_max_concurrent_jobs: int = int(os.getenv("SCHEDULER_MAX_CONCURRENT_JOBS", "10"))
         self.scheduler_tick_interval_seconds: int = int(os.getenv("SCHEDULER_TICK_INTERVAL_SECONDS", "1"))
+        self.analytics_max_points: int = int(os.getenv("ANALYTICS_MAX_POINTS", "10000"))
+        self.analytics_default_aggregation: str = os.getenv("ANALYTICS_DEFAULT_AGGREGATION", "avg")
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -54,6 +56,8 @@ class AppConfig:
             "vault_default_ttl_seconds": self.vault_default_ttl_seconds,
             "scheduler_max_concurrent_jobs": self.scheduler_max_concurrent_jobs,
             "scheduler_tick_interval_seconds": self.scheduler_tick_interval_seconds,
+            "analytics_max_points": self.analytics_max_points,
+            "analytics_default_aggregation": self.analytics_default_aggregation,
             "secret_key_configured": bool(self.secret_key),
         }
 

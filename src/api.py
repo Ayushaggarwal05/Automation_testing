@@ -20,6 +20,7 @@ try:
     from resilience import resilience
     from vault import vault
     from scheduler import scheduler
+    from analytics import analytics
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -37,6 +38,7 @@ except ImportError:
     from src.resilience import resilience
     from src.vault import vault
     from src.scheduler import scheduler
+    from src.analytics import analytics
 
 
 class APIService:
@@ -56,6 +58,7 @@ class APIService:
         self.resilience = resilience
         self.vault = vault
         self.scheduler = scheduler
+        self.analytics = analytics
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -925,6 +928,92 @@ class APIService:
             return {"error": "Unauthorized", "status_code": 401}
 
         stats = self.scheduler.get_stats()
+        return {"stats": stats, "status_code": 200}
+
+    def record_analytics_metric(
+        self,
+        token: str,
+        metric_name: str,
+        value: float,
+        unit: str = "count",
+        tags: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
+        """Record a time-series telemetry metric data point if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            point = self.analytics.record_metric(
+                metric_name=metric_name, value=value, unit=unit, tags=tags
+            )
+            return {
+                "message": "Metric recorded successfully",
+                "point": point.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def get_analytics_series(
+        self,
+        token: str,
+        metric_name: str,
+        aggregation: str = "avg",
+        limit: Optional[int] = 50,
+    ) -> Dict[str, Any]:
+        """Retrieve aggregated summary statistics for a metric series if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            series = self.analytics.get_metric_series(
+                metric_name=metric_name, aggregation=aggregation, limit=limit
+            )
+            return {"series": series, "status_code": 200}
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def track_analytics_funnel(
+        self, token: str, funnel_name: str, step_name: str, user_id: str
+    ) -> Dict[str, Any]:
+        """Track user progression into a conversion funnel step if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            entry = self.analytics.track_funnel_step(
+                funnel_name=funnel_name, step_name=step_name, user_id=user_id
+            )
+            return {
+                "message": "Funnel step tracked successfully",
+                "entry": entry,
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def get_analytics_funnel(self, token: str, funnel_name: str) -> Dict[str, Any]:
+        """Compute funnel conversion and drop-off report if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        report = self.analytics.get_funnel_report(funnel_name=funnel_name)
+        return {"funnel": report, "status_code": 200}
+
+    def list_analytics_metrics(self, token: str) -> Dict[str, Any]:
+        """List distinct tracked metric names if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        metrics_list = self.analytics.list_metric_names()
+        return {"metrics": metrics_list, "count": len(metrics_list), "status_code": 200}
+
+    def get_analytics_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve aggregated analytics telemetry stats if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.analytics.get_stats()
         return {"stats": stats, "status_code": 200}
 
 

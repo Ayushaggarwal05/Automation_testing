@@ -457,9 +457,50 @@ class TestAPIService(unittest.TestCase):
         cancel_res = self.api.cancel_scheduled_job(self.token, job_id)
         self.assertEqual(cancel_res["status_code"], 200)
 
+    def test_analytics_endpoints(self):
+        # Record metric
+        rec_res = self.api.record_analytics_metric(
+            self.token,
+            metric_name="response_time_ms",
+            value=150.0,
+            unit="ms",
+            tags={"endpoint": "/items"},
+        )
+        self.assertEqual(rec_res["status_code"], 201)
+        self.assertEqual(rec_res["point"]["metric_name"], "response_time_ms")
+
+        # Get metric series
+        series_res = self.api.get_analytics_series(
+            self.token, metric_name="response_time_ms", aggregation="avg"
+        )
+        self.assertEqual(series_res["status_code"], 200)
+        self.assertEqual(series_res["series"]["aggregate_value"], 150.0)
+
+        # Track funnel step
+        track_res = self.api.track_analytics_funnel(
+            self.token, funnel_name="checkout", step_name="cart_viewed", user_id="user_abc"
+        )
+        self.assertEqual(track_res["status_code"], 201)
+
+        # Get funnel report
+        funnel_res = self.api.get_analytics_funnel(self.token, funnel_name="checkout")
+        self.assertEqual(funnel_res["status_code"], 200)
+        self.assertEqual(funnel_res["funnel"]["funnel_name"], "checkout")
+
+        # List metrics
+        list_res = self.api.list_analytics_metrics(self.token)
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertIn("response_time_ms", list_res["metrics"])
+
+        # Get stats
+        stats_res = self.api.get_analytics_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("total_data_points", stats_res["stats"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
