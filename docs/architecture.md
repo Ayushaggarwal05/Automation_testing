@@ -25,6 +25,7 @@ graph TD
         Resilience[ResilienceManager (src/resilience.py)]
         Scheduler[SchedulerEngine (src/scheduler.py)]
         Analytics[AnalyticsEngine (src/analytics.py)]
+        Contracts[ContractValidationEngine (src/contracts.py)]
         Events[Event Bus (src/events.py)]
     end
 
@@ -44,11 +45,14 @@ graph TD
     API -->|Manage & Execute| Resilience
     API -->|Manage & Trigger| Scheduler
     API -->|Ingest & Query| Analytics
+    API -->|Register & Validate| Contracts
     Workflows -->|Publish Events| Events
     Flags -->|Publish Events| Events
     Resilience -->|Publish Events| Events
     Scheduler -->|Publish Events| Events
     Analytics -->|Publish Events| Events
+    Contracts -->|Publish Events| Events
+end
 ```
 
 ---
@@ -127,6 +131,9 @@ sequenceDiagram
     - `track_funnel_step(token, funnel_name, step_name, ...)`: Track user conversion funnel progression.
     - `get_funnel_report(token, funnel_name)`: Calculate funnel conversion and drop-off rates.
     - `get_analytics_stats(token)`: Retrieve aggregate statistics and engine status.
+  - **Contract Validation Management**:
+    - `register_contract_schema(token, name, fields, ...)`: Register an API schema.
+    - `validate_payload(token, schema_name, payload)`: Validate data against a registered schema.
 
 ### 3.2 Authentication Service (`src/auth.py`)
 - **Security Middleware**: Manages cryptographic token generation using `SHA-256` hashing with secret key and timestamps.
@@ -155,26 +162,8 @@ sequenceDiagram
 - **Event Publishing**: Publishes flag lifecycle events (`feature_flag_created`, `feature_flag_toggled`, etc.) to the internal event bus.
 
 ### 3.7 Resilience Manager (`src/resilience.py`)
-- **Fault Tolerance & Isolation**: Implements circuit breaker state machines (`CLOSED`, `OPEN`, `HALF_OPEN`) to prevent cascading failures.
-- **Automatic Recovery**: Automatically transitions breakers to half-open state after recovery timeouts elapse.
-- **Event Publishing**: Publishes circuit breaker lifecycle events to the internal event bus.
+- **Fault Tolerance & Isolation**: Implements circuit breaker state machines (`CLOSED`, `OPEN`, `HALF_OPEN`) to prevent cascading
 
-### 3.8 Scheduler Engine (`src/scheduler.py`)
-- **Background Task Scheduling**: Manages recurring and cron-triggered background tasks (`SchedulerEngine`, `ScheduledJob`, `JobExecutionRecord`).
-- **Job Control**: Supports registration, pausing, resuming, triggering, and cancellation of jobs.
-- **Event Publishing**: Publishes scheduler lifecycle events to the internal event bus.
-
-### 3.9 Analytics Engine (`src/analytics.py`)
-- **Telemetry & Time-Series Aggregation**: Ingests and aggregates telemetry data points (`MetricDataPoint`, `AnalyticsEngine`) with support for avg, sum, count, min, and max aggregations.
-- **Funnel Tracking**: Tracks user progression steps through conversion funnels and generates detailed step-by-step conversion and drop-off reports.
-- **Event Publishing**: Publishes analytics lifecycle events to the internal event bus.
-
----
-
-## 4. CI/CD & Automation Workflow
-
-The repository includes native GitHub Actions integration:
-
-```mermaid
-graph LR
-    P
+### 3.8 Contract Validation Engine (`src/contracts.py`)
+- **Schema Enforcement**: Validates input payloads against structured definitions checking types, constraints, and regular expressions.
+- **Event Publishing**: Publishes contract schema lifecycle and validation events to the internal event bus.

@@ -20,7 +20,8 @@ Welcome to the **Automation Testing** sample repository (v2.4.0). This repositor
     ├── vault.py
     ├── scheduler.py
     ├── analytics.py
-    └── policies.py
+    ├── policies.py
+    └── contracts.py
 ```
 
 ## Getting Started
@@ -53,6 +54,7 @@ python src/api.py
 - **Vault Module**: Encrypted secret storage, versioning, rotation policies, TTL expiration, access control, and event publishing.
 - **Scheduler Module**: Background task scheduling, cron triggers, execution history tracking, and task management.
 - **Analytics Module**: Time-series telemetry aggregation, metric ingestion, and funnel tracking with reporting.
+- **Contract Validation Engine**: API schema enforcement, strict/non-strict validation modes, data type verification, and contract compliance telemetry.
 - **Documentation**: Architectural overview and system diagrams.
 
 ## API Endpoints Summary
