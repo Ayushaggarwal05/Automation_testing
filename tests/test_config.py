@@ -34,6 +34,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertEqual(cfg.scheduler_tick_interval_seconds, 1)
         self.assertEqual(cfg.analytics_max_points, 10000)
         self.assertEqual(cfg.analytics_default_aggregation, "avg")
+        self.assertEqual(cfg.policy_default_effect, "DENY")
+        self.assertTrue(cfg.policy_cache_enabled)
 
     def test_to_dict_keys(self):
         cfg = AppConfig()
@@ -56,6 +58,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertIn("scheduler_tick_interval_seconds", d)
         self.assertIn("analytics_max_points", d)
         self.assertIn("analytics_default_aggregation", d)
+        self.assertIn("policy_default_effect", d)
+        self.assertIn("policy_cache_enabled", d)
         self.assertIn("secret_key_configured", d)
 
 

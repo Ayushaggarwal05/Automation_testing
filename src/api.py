@@ -21,6 +21,7 @@ try:
     from vault import vault
     from scheduler import scheduler
     from analytics import analytics
+    from policies import policies
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -39,6 +40,7 @@ except ImportError:
     from src.vault import vault
     from src.scheduler import scheduler
     from src.analytics import analytics
+    from src.policies import policies
 
 
 class APIService:
@@ -59,6 +61,7 @@ class APIService:
         self.vault = vault
         self.scheduler = scheduler
         self.analytics = analytics
+        self.policies = policies
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -1014,6 +1017,92 @@ class APIService:
             return {"error": "Unauthorized", "status_code": 401}
 
         stats = self.analytics.get_stats()
+        return {"stats": stats, "status_code": 200}
+
+    def create_access_policy(
+        self,
+        token: str,
+        name: str,
+        effect: str = "ALLOW",
+        actions: Optional[List[str]] = None,
+        resources: Optional[List[str]] = None,
+        roles: Optional[List[str]] = None,
+        conditions: Optional[Dict[str, Any]] = None,
+        description: str = "",
+    ) -> Dict[str, Any]:
+        """Create a new access policy rule if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            policy = self.policies.create_policy(
+                name=name,
+                effect=effect,
+                actions=actions,
+                resources=resources,
+                roles=roles,
+                conditions=conditions,
+                description=description,
+            )
+            return {
+                "message": "Policy created successfully",
+                "policy": policy.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def list_access_policies(self, token: str, enabled_only: bool = False) -> Dict[str, Any]:
+        """List registered access policies if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        policy_list = self.policies.list_policies(enabled_only=enabled_only)
+        return {"policies": policy_list, "count": len(policy_list), "status_code": 200}
+
+    def get_access_policy(self, token: str, policy_id: str) -> Dict[str, Any]:
+        """Retrieve a specific policy rule by ID if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        policy = self.policies.get_policy(policy_id)
+        if not policy:
+            return {"error": f"Policy '{policy_id}' not found", "status_code": 404}
+        return {"policy": policy.to_dict(), "status_code": 200}
+
+    def evaluate_access_policy(
+        self,
+        token: str,
+        subject_role: str,
+        action: str,
+        resource: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Evaluate an authorization decision based on dynamic ABAC/RBAC rules if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        result = self.policies.evaluate(
+            subject_role=subject_role, action=action, resource=resource, context=context
+        )
+        return {"evaluation": result, "status_code": 200}
+
+    def delete_access_policy(self, token: str, policy_id: str) -> Dict[str, Any]:
+        """Delete an access policy if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        deleted = self.policies.delete_policy(policy_id)
+        if not deleted:
+            return {"error": f"Policy '{policy_id}' not found", "status_code": 404}
+        return {"message": f"Policy '{policy_id}' deleted successfully", "status_code": 200}
+
+    def get_policy_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve aggregated policy engine metrics if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.policies.get_stats()
         return {"stats": stats, "status_code": 200}
 
 

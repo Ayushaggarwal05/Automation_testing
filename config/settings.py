@@ -33,6 +33,8 @@ class AppConfig:
         self.scheduler_tick_interval_seconds: int = int(os.getenv("SCHEDULER_TICK_INTERVAL_SECONDS", "1"))
         self.analytics_max_points: int = int(os.getenv("ANALYTICS_MAX_POINTS", "10000"))
         self.analytics_default_aggregation: str = os.getenv("ANALYTICS_DEFAULT_AGGREGATION", "avg")
+        self.policy_default_effect: str = os.getenv("POLICY_DEFAULT_EFFECT", "DENY")
+        self.policy_cache_enabled: bool = os.getenv("POLICY_CACHE_ENABLED", "true").lower() in ("true", "1", "yes")
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -58,6 +60,8 @@ class AppConfig:
             "scheduler_tick_interval_seconds": self.scheduler_tick_interval_seconds,
             "analytics_max_points": self.analytics_max_points,
             "analytics_default_aggregation": self.analytics_default_aggregation,
+            "policy_default_effect": self.policy_default_effect,
+            "policy_cache_enabled": self.policy_cache_enabled,
             "secret_key_configured": bool(self.secret_key),
         }
 

@@ -497,9 +497,53 @@ class TestAPIService(unittest.TestCase):
         self.assertEqual(stats_res["status_code"], 200)
         self.assertIn("total_data_points", stats_res["stats"])
 
+    def test_policy_endpoints(self):
+        # Create policy
+        create_res = self.api.create_access_policy(
+            self.token,
+            name="allow_admin_manage_items",
+            effect="ALLOW",
+            actions=["create", "update", "delete"],
+            resources=["items"],
+            roles=["admin"],
+            description="Allow full item management for admins",
+        )
+        self.assertEqual(create_res["status_code"], 201)
+        policy_id = create_res["policy"]["id"]
+
+        # List policies
+        list_res = self.api.list_access_policies(self.token)
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertGreaterEqual(list_res["count"], 1)
+
+        # Get policy
+        get_res = self.api.get_access_policy(self.token, policy_id)
+        self.assertEqual(get_res["status_code"], 200)
+        self.assertEqual(get_res["policy"]["name"], "allow_admin_manage_items")
+
+        # Evaluate policy
+        eval_res = self.api.evaluate_access_policy(
+            self.token,
+            subject_role="admin",
+            action="create",
+            resource="items",
+        )
+        self.assertEqual(eval_res["status_code"], 200)
+        self.assertTrue(eval_res["evaluation"]["allowed"])
+
+        # Get stats
+        stats_res = self.api.get_policy_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("total_policies", stats_res["stats"])
+
+        # Delete policy
+        del_res = self.api.delete_access_policy(self.token, policy_id)
+        self.assertEqual(del_res["status_code"], 200)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
