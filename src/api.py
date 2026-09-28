@@ -22,6 +22,7 @@ try:
     from scheduler import scheduler
     from analytics import analytics
     from policies import policies
+    from contracts import contracts
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -41,6 +42,7 @@ except ImportError:
     from src.scheduler import scheduler
     from src.analytics import analytics
     from src.policies import policies
+    from src.contracts import contracts
 
 
 class APIService:
@@ -62,6 +64,7 @@ class APIService:
         self.scheduler = scheduler
         self.analytics = analytics
         self.policies = policies
+        self.contracts = contracts
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -1103,6 +1106,95 @@ class APIService:
             return {"error": "Unauthorized", "status_code": 401}
 
         stats = self.policies.get_stats()
+        return {"stats": stats, "status_code": 200}
+
+    def register_contract_schema(
+        self,
+        token: str,
+        name: str,
+        fields: Any,
+        version: str = "1.0",
+        strict: Optional[bool] = None,
+        description: str = "",
+    ) -> Dict[str, Any]:
+        """Register a new payload contract schema if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            schema = self.contracts.register_schema(
+                name=name,
+                fields=fields,
+                version=version,
+                strict=strict,
+                description=description,
+            )
+            return {
+                "message": "Contract schema registered successfully",
+                "schema": schema.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def validate_contract_payload(
+        self,
+        token: str,
+        schema_name_or_id: str,
+        payload: Dict[str, Any],
+        version: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Validate a dictionary payload against a registered contract schema if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            result = self.contracts.validate(
+                schema_id_or_name=schema_name_or_id,
+                payload=payload,
+                version=version,
+            )
+            status_code = 200 if result.is_valid else 422
+            return {"validation": result.to_dict(), "status_code": status_code}
+        except ValueError as e:
+            return {"error": str(e), "status_code": 404}
+
+    def get_contract_schema(
+        self, token: str, schema_name_or_id: str, version: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Retrieve a specific contract schema by ID or name if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        schema = self.contracts.get_schema(schema_name_or_id, version=version)
+        if not schema:
+            return {"error": f"Schema '{schema_name_or_id}' not found", "status_code": 404}
+        return {"schema": schema.to_dict(), "status_code": 200}
+
+    def list_contract_schemas(self, token: str) -> Dict[str, Any]:
+        """List all registered contract schemas if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        schema_list = self.contracts.list_schemas()
+        return {"schemas": schema_list, "count": len(schema_list), "status_code": 200}
+
+    def delete_contract_schema(self, token: str, schema_id: str) -> Dict[str, Any]:
+        """Delete a contract schema by ID if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        deleted = self.contracts.delete_schema(schema_id)
+        if not deleted:
+            return {"error": f"Schema '{schema_id}' not found", "status_code": 404}
+        return {"message": f"Contract schema '{schema_id}' deleted successfully", "status_code": 200}
+
+    def get_contract_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve contract validation telemetry and compliance statistics if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.contracts.get_stats()
         return {"stats": stats, "status_code": 200}
 
 

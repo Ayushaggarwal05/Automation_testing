@@ -540,6 +540,56 @@ class TestAPIService(unittest.TestCase):
         del_res = self.api.delete_access_policy(self.token, policy_id)
         self.assertEqual(del_res["status_code"], 200)
 
+    def test_contracts_endpoints(self):
+        # Register schema
+        reg_res = self.api.register_contract_schema(
+            self.token,
+            name="order_schema",
+            fields={
+                "order_id": {"field_type": "string", "min_length": 3},
+                "amount": {"field_type": "number", "min_value": 0.0},
+                "currency": {"field_type": "string", "allowed_values": ["USD", "EUR", "GBP"]},
+            },
+            version="1.0",
+            strict=True,
+            description="Schema contract for e-commerce orders",
+        )
+        self.assertEqual(reg_res["status_code"], 201)
+        schema_id = reg_res["schema"]["id"]
+
+        # List schemas
+        list_res = self.api.list_contract_schemas(self.token)
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertGreaterEqual(list_res["count"], 1)
+
+        # Get schema
+        get_res = self.api.get_contract_schema(self.token, "order_schema")
+        self.assertEqual(get_res["status_code"], 200)
+        self.assertEqual(get_res["schema"]["id"], schema_id)
+
+        # Validate valid payload
+        valid_payload = {"order_id": "ORD-99", "amount": 49.99, "currency": "USD"}
+        val_res = self.api.validate_contract_payload(self.token, "order_schema", valid_payload)
+        self.assertEqual(val_res["status_code"], 200)
+        self.assertTrue(val_res["validation"]["is_valid"])
+
+        # Validate invalid payload (violates strictness & constraint)
+        invalid_payload = {"order_id": "O", "amount": -10.0, "currency": "JPY", "extra": 123}
+        val_res_bad = self.api.validate_contract_payload(self.token, "order_schema", invalid_payload)
+        self.assertEqual(val_res_bad["status_code"], 422)
+        self.assertFalse(val_res_bad["validation"]["is_valid"])
+        self.assertGreater(len(val_res_bad["validation"]["errors"]), 0)
+
+        # Get stats
+        stats_res = self.api.get_contract_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("total_schemas", stats_res["stats"])
+        self.assertEqual(stats_res["stats"]["total_validations"], 2)
+
+        # Delete schema
+        del_res = self.api.delete_contract_schema(self.token, schema_id)
+        self.assertEqual(del_res["status_code"], 200)
+
 
 if __name__ == "__main__":
     unittest.main()

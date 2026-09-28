@@ -35,6 +35,8 @@ class AppConfig:
         self.analytics_default_aggregation: str = os.getenv("ANALYTICS_DEFAULT_AGGREGATION", "avg")
         self.policy_default_effect: str = os.getenv("POLICY_DEFAULT_EFFECT", "DENY")
         self.policy_cache_enabled: bool = os.getenv("POLICY_CACHE_ENABLED", "true").lower() in ("true", "1", "yes")
+        self.contract_strict_mode: bool = os.getenv("CONTRACT_STRICT_MODE", "true").lower() in ("true", "1", "yes")
+        self.contract_max_schemas: int = int(os.getenv("CONTRACT_MAX_SCHEMAS", "500"))
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -62,6 +64,8 @@ class AppConfig:
             "analytics_default_aggregation": self.analytics_default_aggregation,
             "policy_default_effect": self.policy_default_effect,
             "policy_cache_enabled": self.policy_cache_enabled,
+            "contract_strict_mode": self.contract_strict_mode,
+            "contract_max_schemas": self.contract_max_schemas,
             "secret_key_configured": bool(self.secret_key),
         }
 
