@@ -19,7 +19,8 @@ Welcome to the **Automation Testing** sample repository (v2.4.0). This repositor
     ├── resilience.py
     ├── vault.py
     ├── scheduler.py
-    └── analytics.py
+    ├── analytics.py
+    └── policies.py
 ```
 
 ## Getting Started
