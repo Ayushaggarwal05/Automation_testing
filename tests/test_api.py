@@ -652,6 +652,63 @@ class TestAPIService(unittest.TestCase):
         self.assertEqual(stats_res["status_code"], 200)
         self.assertIn("published_count", stats_res["stats"])
 
+    def test_throttler_endpoints(self):
+        # Register rule
+        rule_res = self.api.register_throttle_rule(
+            self.token,
+            name="checkout_tier",
+            capacity=2,
+            refill_rate=0.1,
+            window_seconds=30.0,
+            algorithm="token_bucket",
+            tier="premium",
+            description="Throttling for checkout operations",
+        )
+        self.assertEqual(rule_res["status_code"], 201)
+        self.assertEqual(rule_res["rule"]["name"], "checkout_tier")
+
+        # List rules
+        list_res = self.api.list_throttle_rules(self.token)
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertGreaterEqual(list_res["count"], 1)
+
+        # Evaluate request - 1st allowed
+        eval1 = self.api.evaluate_throttle_request(self.token, client_key="ip_1.2.3.4", rule_name="checkout_tier")
+        self.assertEqual(eval1["status_code"], 200)
+        self.assertTrue(eval1["decision"]["allowed"])
+
+        # Evaluate request - 2nd allowed
+        eval2 = self.api.evaluate_throttle_request(self.token, client_key="ip_1.2.3.4", rule_name="checkout_tier")
+        self.assertEqual(eval2["status_code"], 200)
+        self.assertTrue(eval2["decision"]["allowed"])
+
+        # Evaluate request - 3rd throttled (429)
+        eval3 = self.api.evaluate_throttle_request(self.token, client_key="ip_1.2.3.4", rule_name="checkout_tier")
+        self.assertEqual(eval3["status_code"], 429)
+        self.assertFalse(eval3["decision"]["allowed"])
+
+        # Reset client
+        reset_res = self.api.reset_throttle_client(self.token, client_key="ip_1.2.3.4")
+        self.assertEqual(reset_res["status_code"], 200)
+
+        # Blacklist client
+        bl_res = self.api.blacklist_client(self.token, client_key="abuser_1", duration_seconds=60.0)
+        self.assertEqual(bl_res["status_code"], 200)
+
+        # Blacklisted request gets 429
+        eval_bl = self.api.evaluate_throttle_request(self.token, client_key="abuser_1")
+        self.assertEqual(eval_bl["status_code"], 429)
+        self.assertTrue(eval_bl["decision"]["is_blacklisted"])
+
+        # Unblacklist
+        unbl_res = self.api.unblacklist_client(self.token, client_key="abuser_1")
+        self.assertEqual(unbl_res["status_code"], 200)
+
+        # Throttler stats
+        stats_res = self.api.get_throttler_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("total_checks", stats_res["stats"])
+
 
 if __name__ == "__main__":
     unittest.main()

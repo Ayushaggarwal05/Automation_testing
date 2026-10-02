@@ -40,6 +40,9 @@ class TestAppConfig(unittest.TestCase):
         self.assertEqual(cfg.contract_max_schemas, 500)
         self.assertEqual(cfg.stream_router_max_retries, 3)
         self.assertEqual(cfg.stream_router_retention_limit, 1000)
+        self.assertEqual(cfg.throttler_default_algorithm, "token_bucket")
+        self.assertEqual(cfg.throttler_default_capacity, 100)
+        self.assertEqual(cfg.throttler_default_refill_rate, 10.0)
 
     def test_to_dict_keys(self):
         cfg = AppConfig()
@@ -68,6 +71,9 @@ class TestAppConfig(unittest.TestCase):
         self.assertIn("contract_max_schemas", d)
         self.assertIn("stream_router_max_retries", d)
         self.assertIn("stream_router_retention_limit", d)
+        self.assertIn("throttler_default_algorithm", d)
+        self.assertIn("throttler_default_capacity", d)
+        self.assertIn("throttler_default_refill_rate", d)
         self.assertIn("secret_key_configured", d)
 
 

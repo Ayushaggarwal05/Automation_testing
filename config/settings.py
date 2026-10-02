@@ -39,6 +39,9 @@ class AppConfig:
         self.contract_max_schemas: int = int(os.getenv("CONTRACT_MAX_SCHEMAS", "500"))
         self.stream_router_max_retries: int = int(os.getenv("STREAM_ROUTER_MAX_RETRIES", "3"))
         self.stream_router_retention_limit: int = int(os.getenv("STREAM_ROUTER_RETENTION_LIMIT", "1000"))
+        self.throttler_default_algorithm: str = os.getenv("THROTTLER_DEFAULT_ALGORITHM", "token_bucket")
+        self.throttler_default_capacity: int = int(os.getenv("THROTTLER_DEFAULT_CAPACITY", "100"))
+        self.throttler_default_refill_rate: float = float(os.getenv("THROTTLER_DEFAULT_REFILL_RATE", "10.0"))
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -70,6 +73,9 @@ class AppConfig:
             "contract_max_schemas": self.contract_max_schemas,
             "stream_router_max_retries": self.stream_router_max_retries,
             "stream_router_retention_limit": self.stream_router_retention_limit,
+            "throttler_default_algorithm": self.throttler_default_algorithm,
+            "throttler_default_capacity": self.throttler_default_capacity,
+            "throttler_default_refill_rate": self.throttler_default_refill_rate,
             "secret_key_configured": bool(self.secret_key),
         }
 

@@ -24,6 +24,7 @@ try:
     from policies import policies
     from contracts import contracts
     from stream_router import stream_router
+    from throttler import throttler
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -45,6 +46,7 @@ except ImportError:
     from src.policies import policies
     from src.contracts import contracts
     from src.stream_router import stream_router
+    from src.throttler import throttler
 
 
 class APIService:
@@ -68,6 +70,7 @@ class APIService:
         self.policies = policies
         self.contracts = contracts
         self.stream_router = stream_router
+        self.throttler = throttler
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -1332,6 +1335,108 @@ class APIService:
             return {"error": "Unauthorized", "status_code": 401}
 
         stats = self.stream_router.get_stats()
+        return {"stats": stats, "status_code": 200}
+
+    def register_throttle_rule(
+        self,
+        token: str,
+        name: str,
+        capacity: int,
+        refill_rate: Optional[float] = None,
+        window_seconds: float = 60.0,
+        algorithm: Optional[str] = None,
+        tier: str = "custom",
+        description: str = "",
+    ) -> Dict[str, Any]:
+        """Register a rate-limiting rule if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            rule = self.throttler.register_rule(
+                name=name,
+                capacity=capacity,
+                refill_rate=refill_rate,
+                window_seconds=window_seconds,
+                algorithm=algorithm,
+                tier=tier,
+                description=description,
+            )
+            return {
+                "message": "Throttle rule registered successfully",
+                "rule": rule.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def evaluate_throttle_request(
+        self,
+        token: str,
+        client_key: str,
+        rule_name: str = "standard",
+        cost: int = 1,
+    ) -> Dict[str, Any]:
+        """Evaluate a rate-limiting decision for a client if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            decision = self.throttler.evaluate(client_key=client_key, rule_name=rule_name, cost=cost)
+            status_code = 200 if decision.allowed else 429
+            return {"decision": decision.to_dict(), "status_code": status_code}
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def blacklist_client(
+        self,
+        token: str,
+        client_key: str,
+        duration_seconds: float = 300.0,
+        reason: str = "Excessive traffic",
+    ) -> Dict[str, Any]:
+        """Place a client identity on the temporary blacklist if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            self.throttler.blacklist_client(client_key=client_key, duration_seconds=duration_seconds, reason=reason)
+            return {"message": f"Client '{client_key}' blacklisted for {duration_seconds}s", "status_code": 200}
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def unblacklist_client(self, token: str, client_key: str) -> Dict[str, Any]:
+        """Remove a client identity from the temporary blacklist if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        unblocked = self.throttler.unblacklist_client(client_key=client_key)
+        if not unblocked:
+            return {"error": f"Client '{client_key}' is not blacklisted", "status_code": 404}
+        return {"message": f"Client '{client_key}' removed from blacklist", "status_code": 200}
+
+    def reset_throttle_client(self, token: str, client_key: str, rule_name: Optional[str] = None) -> Dict[str, Any]:
+        """Reset rate limit usage counters for a client if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        self.throttler.reset_client(client_key=client_key, rule_name=rule_name)
+        return {"message": f"Rate limit reset for client '{client_key}'", "status_code": 200}
+
+    def list_throttle_rules(self, token: str) -> Dict[str, Any]:
+        """List registered throttle rules if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        rules = self.throttler.list_rules()
+        return {"rules": rules, "count": len(rules), "status_code": 200}
+
+    def get_throttler_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve rate limiting telemetry and violation metrics if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.throttler.get_stats()
         return {"stats": stats, "status_code": 200}
 
 
