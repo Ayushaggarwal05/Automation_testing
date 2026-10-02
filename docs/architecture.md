@@ -28,6 +28,7 @@ graph TD
         Contracts[ContractValidationEngine (src/contracts.py)]
         StreamRouter[StreamRouterEngine (src/stream_router.py)]
         Throttler[TrafficThrottler (src/throttler.py)]
+        Leases[LeaseManager (src/leases.py)]
         Events[Event Bus (src/events.py)]
     end
 
@@ -50,6 +51,7 @@ graph TD
     API -->|Register & Validate| Contracts
     API -->|Route & Stream| StreamRouter
     API -->|Evaluate & Limit| Throttler
+    API -->|Acquire & Manage| Leases
     Workflows -->|Publish Events| Events
     Flags -->|Publish Events| Events
     Resilience -->|Publish Events| Events
@@ -58,6 +60,7 @@ graph TD
     Contracts -->|Publish Events| Events
     StreamRouter -->|Publish Events| Events
     Throttler -->|Publish Events| Events
+    Leases -->|Publish Events| Events
 end
 ```
 
@@ -99,70 +102,25 @@ sequenceDiagram
 ### 3.1 API Service (`src/api.py`)
 - **Transport / Interface Layer**: Handles endpoint routing, status code generation, and parameter validation.
 - **Protected Actions**: Validates caller tokens before accessing protected item resources.
-- **Operations**:
+- **Operations`**:
   - `health_check()`: Health and version probe (`1.1.0`).
   - `get_items(token)`: List all inventory records.
   - `get_item_by_id(token, item_id)`: Retrieve specific item with 404 boundary handling.
   - `add_item(token, item_name)`: Append new item with auto-incremented ID.
   - `update_item_status(token, item_id, new_status)`: Change item lifecycle state (`active`, `pending`, etc.).
   - `delete_item(token, item_id)`: Remove item by ID.
-  - **Workflow Management**:
-    - `create_workflow(token, name, steps, ...)`: Register a new automation workflow.
-    - `list_workflows(token)` / `get_workflow(token, workflow_id)`: Retrieve workflow definitions.
-    - `execute_workflow(token, workflow_id)`: Trigger synchronous execution of a workflow.
-    - `list_workflow_executions(token)` / `get_workflow_execution(token, execution_id)`: Track execution history.
-  - **Audit Logging & Verification**:
-    - `log_audit_event(token, actor, action, ...)`: Record a tamper-evident audit record.
-    - `list_audit_logs(token, ...)`: Query audit records with filtering options.
-    - `verify_audit_integrity(token)`: Verify cryptographic hash chaining across the audit trail.
-  - **Feature Flag Management**:
-    - `create_feature_flag(token, name, ...)`: Define a new feature flag.
-    - `list_feature_flags(token)` / `get_feature_flag(token, flag_name)`: Retrieve feature flag definitions.
-    - `evaluate_feature_flag(token, flag_name, context)`: Evaluate flag status for a specific user or context.
-  - **Resilience & Circuit Breaker Management**:
-    - `create_circuit_breaker(token, name, ...)`: Register a new circuit breaker.
-    - `list_circuit_breakers(token)` / `get_circuit_breaker(token, name)`: Retrieve breaker state.
-    - `execute_with_circuit_breaker(token, name, ...)`: Execute an action under circuit breaker protection.
-  - **Background Task Scheduling**:
-    - `schedule_job(token, name, target_action, ...)`: Schedule recurring or cron-based tasks.
-    - `list_scheduled_jobs(token)` / `get_scheduled_job(token, job_id)`: Retrieve job configurations.
-    - `pause_job(token, job_id)` / `resume_job(token, job_id)`: Control job execution state.
-    - `trigger_job(token, job_id)`: Manually trigger job execution.
-    - `cancel_job(token, job_id)`: Cancel scheduled jobs.
-    - `list_job_executions(token)`: Track job execution history.
-  - **Analytics & Telemetry**:
-    - `record_analytics_metric(token, metric_name, value, ...)`: Ingest a time-series metric data point.
-    - `get_metric_series(token, metric_name, ...)`: Retrieve metric data points over a time range.
-    - `list_analytics_metrics(token)`: List all recorded metric names.
-    - `track_funnel_step(token, funnel_name, step_name, ...)`: Track user conversion funnel progression.
-    - `get_funnel_report(token, funnel_name)`: Calculate funnel conversion and drop-off rates.
-    - `get_analytics_stats(token)`: Retrieve aggregate statistics and engine status.
-  - **Contract Validation Management**:
-    - `register_contract_schema(token, name, fields, ...)`: Register an API schema.
-    - `validate_payload(token, schema_name, payload)`: Validate data against a registered schema.
-  - **Stream Router & Event Streaming**:
-    - `publish_stream_message(token, topic, payload, ...)`: Publish messages to topic streams.
-    - `subscribe_stream_topic(token, topic_pattern, ...)`: Subscribe consumer groups to topic streams.
-    - `poll_stream_messages(token, subscription_id, ...)`: Poll unacknowledged messages.
-    - `acknowledge_stream_message(token, subscription_id, message_id)`: Acknowledge successful processing.
-    - `nack_stream_message(token, subscription_id, message_id)`: Negatively acknowledge messages with retry logic and DLQ routing.
-    - `get_stream_dead_letters(token)`: Retrieve dead-letter queue entries.
-    - `replay_stream_dead_letter(token, dlq_id)`: Replay dead-lettered messages.
-  - **Traffic Throttling & Rate Limiting**:
-    - `register_throttle_rule(token, name, ...)`: Register a rate-limiting rule.
-    - `evaluate_throttle_request(token, rule_name, client_id, ...)`: Evaluate request against throttle rules.
-    - `blacklist_client(token, client_id, ...)`: Add client to throttle blacklist.
-    - `unblacklist_client(token, client_id)`: Remove client from throttle blacklist.
+  - **Workflow Management**: Create, list, retrieve, and execute automation workflows and track execution history.
+  - **Audit Logging & Verification**: Record tamper-evident audit records and verify cryptographic hash chaining.
+  - **Feature Flag Management**: Define, retrieve, and evaluate feature flag statuses.
+  - **Resilience & Circuit Breaker Management**: Register and execute actions under circuit breaker protection.
+  - **Background Task Scheduling**: Schedule, pause, resume, trigger, and cancel cron-based tasks.
+  - **Analytics & Telemetry**: Ingest time-series metrics, track user funnels, and retrieve reports.
+  - **Contract Validation Management**: Register API schemas and validate payloads.
+  - **Stream Router & Event Streaming**: Publish, subscribe, poll, acknowledge, and replay stream messages and dead letters.
+  - **Traffic Throttling & Rate Limiting**: Register rate-limiting rules and manage client blacklists.
+  - **Distributed Leases (`src/leases.py`)**: Acquire, renew, release, inspect, and force-break exclusive resource lease locks with fencing tokens.
 
 ### 3.2 Authentication Service (`src/auth.py`)
 - **Security Middleware**: Manages cryptographic token generation using `SHA-256` hashing with secret key and timestamps.
 - **Role-Based Access Control (RBAC)**: Supports roles (`user`, `admin`) attached to session tokens.
 - **Session Lifecycle**: In-memory token expiration management with 3600-second TTL.
-
-### 3.3 Test & Verification Suite (`tests/test_api.py`)
-- Standardized `unittest` test suite covering authentication mechanics, permission checks, and full API endpoint workflows.
-
-### 3.4 Workflow Engine (`src/workflows.py`)
-- **Automation & Execution Pipeline**: Manages multi-step synchronous workflows (`Workflow`, `WorkflowStep`, `WorkflowExecution`).
-- **Configuration Limits**: Respects execution limits defined in `AppConfig` (such as `workflow_max_steps` and `workflow_execution_timeout_seconds`).
-- **Event-Driven Notifications**:
