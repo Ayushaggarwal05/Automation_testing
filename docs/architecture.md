@@ -26,6 +26,7 @@ graph TD
         Scheduler[SchedulerEngine (src/scheduler.py)]
         Analytics[AnalyticsEngine (src/analytics.py)]
         Contracts[ContractValidationEngine (src/contracts.py)]
+        StreamRouter[StreamRouterEngine (src/stream_router.py)]
         Events[Event Bus (src/events.py)]
     end
 
@@ -46,12 +47,14 @@ graph TD
     API -->|Manage & Trigger| Scheduler
     API -->|Ingest & Query| Analytics
     API -->|Register & Validate| Contracts
+    API -->|Route & Stream| StreamRouter
     Workflows -->|Publish Events| Events
     Flags -->|Publish Events| Events
     Resilience -->|Publish Events| Events
     Scheduler -->|Publish Events| Events
     Analytics -->|Publish Events| Events
     Contracts -->|Publish Events| Events
+    StreamRouter -->|Publish Events| Events
 end
 ```
 
@@ -134,6 +137,14 @@ sequenceDiagram
   - **Contract Validation Management**:
     - `register_contract_schema(token, name, fields, ...)`: Register an API schema.
     - `validate_payload(token, schema_name, payload)`: Validate data against a registered schema.
+  - **Stream Router & Event Streaming**:
+    - `publish_stream_message(token, topic, payload, ...)`: Publish messages to topic streams.
+    - `subscribe_stream_topic(token, topic_pattern, ...)`: Subscribe consumer groups to topic streams.
+    - `poll_stream_messages(token, subscription_id, ...)`: Poll unacknowledged messages.
+    - `acknowledge_stream_message(token, subscription_id, message_id)`: Acknowledge successful processing.
+    - `nack_stream_message(token, subscription_id, message_id)`: Negatively acknowledge messages with retry logic and DLQ routing.
+    - `get_stream_dead_letters(token)`: Retrieve dead-letter queue entries.
+    - `replay_stream_dead_letter(token, dlq_id)`: Replay dead-lettered messages.
 
 ### 3.2 Authentication Service (`src/auth.py`)
 - **Security Middleware**: Manages cryptographic token generation using `SHA-256` hashing with secret key and timestamps.
@@ -158,12 +169,8 @@ sequenceDiagram
 
 ### 3.6 Feature Flag Manager (`src/feature_flags.py`)
 - **Flag Control & Rollouts**: Manages feature toggles with percentage rollouts, user/role targeting, and caching rules.
-- **Deterministic Evaluation**: Evaluates flags based on contextual user data and cryptographic hashing.
-- **Event Publishing**: Publishes flag lifecycle events (`feature_flag_created`, `feature_flag_toggled`, etc.) to the internal event bus.
+- **Deterministic Evaluation**: Evaluates flags accurately with context.
 
-### 3.7 Resilience Manager (`src/resilience.py`)
-- **Fault Tolerance & Isolation**: Implements circuit breaker state machines (`CLOSED`, `OPEN`, `HALF_OPEN`) to prevent cascading
-
-### 3.8 Contract Validation Engine (`src/contracts.py`)
-- **Schema Enforcement**: Validates input payloads against structured definitions checking types, constraints, and regular expressions.
-- **Event Publishing**: Publishes contract schema lifecycle and validation events to the internal event bus.
+### 3.7 Stream Router Engine (`src/stream_router.py`)
+- **Pub-Sub Messaging & Consumer Groups**: Manages topic-based message streaming, consumer group partitioning, payload filtering, and message acknowledgments.
+- **Reliability & Error Handling**: Implements message retries, Dead-Letter Queue (DLQ) routing upon retry exhaustion, and message replay capabilities.

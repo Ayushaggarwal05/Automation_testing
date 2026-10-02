@@ -21,7 +21,8 @@ Welcome to the **Automation Testing** sample repository (v2.4.0). This repositor
     ├── scheduler.py
     ├── analytics.py
     ├── policies.py
-    └── contracts.py
+    ├── contracts.py
+    └── stream_router.py
 ```
 
 ## Getting Started
@@ -55,6 +56,7 @@ python src/api.py
 - **Scheduler Module**: Background task scheduling, cron triggers, execution history tracking, and task management.
 - **Analytics Module**: Time-series telemetry aggregation, metric ingestion, and funnel tracking with reporting.
 - **Contract Validation Engine**: API schema enforcement, strict/non-strict validation modes, data type verification, and contract compliance telemetry.
+- **Stream Router Engine**: Topic-based pub-sub streaming, consumer group partitioning, payload filtering, message acknowledgments, dead-letter queue (DLQ), and retry/replay capabilities.
 - **Documentation**: Architectural overview and system diagrams.
 
 ## API Endpoints Summary
