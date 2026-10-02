@@ -590,6 +590,68 @@ class TestAPIService(unittest.TestCase):
         del_res = self.api.delete_contract_schema(self.token, schema_id)
         self.assertEqual(del_res["status_code"], 200)
 
+    def test_stream_router_endpoints(self):
+        # Subscribe
+        sub_res = self.api.subscribe_stream_topic(
+            self.token,
+            topic_pattern="orders.*",
+            consumer_group="billing_service",
+            filter_expression={"status": "paid"},
+        )
+        self.assertEqual(sub_res["status_code"], 201)
+        self.assertEqual(sub_res["subscription"]["consumer_group"], "billing_service")
+
+        # Publish matching message
+        pub_res = self.api.publish_stream_message(
+            self.token,
+            topic="orders.checkout",
+            payload={"order_id": "ORD-500", "status": "paid"},
+            headers={"client": "web"},
+        )
+        self.assertEqual(pub_res["status_code"], 201)
+        msg_id = pub_res["envelope"]["id"]
+
+        # Poll messages
+        poll_res = self.api.poll_stream_messages(
+            self.token, consumer_group="billing_service", topic="orders.checkout"
+        )
+        self.assertEqual(poll_res["status_code"], 200)
+        self.assertEqual(len(poll_res["messages"]), 1)
+        self.assertEqual(poll_res["messages"][0]["id"], msg_id)
+
+        # Acknowledge message
+        ack_res = self.api.acknowledge_stream_message(
+            self.token, message_id=msg_id, consumer_group="billing_service"
+        )
+        self.assertEqual(ack_res["status_code"], 200)
+
+        # Nack a separate message to test DLQ
+        pub_fail = self.api.publish_stream_message(
+            self.token,
+            topic="orders.checkout",
+            payload={"order_id": "ORD-999", "status": "paid"},
+            max_retries=1,
+        )
+        fail_id = pub_fail["envelope"]["id"]
+        nack_res = self.api.nack_stream_message(
+            self.token, message_id=fail_id, consumer_group="billing_service", reason="Payment gateway error"
+        )
+        self.assertEqual(nack_res["status_code"], 200)
+
+        # Check DLQ
+        dlq_res = self.api.get_stream_dead_letters(self.token)
+        self.assertEqual(dlq_res["status_code"], 200)
+        self.assertGreaterEqual(dlq_res["count"], 1)
+
+        # Replay DLQ
+        replay_res = self.api.replay_stream_dead_letter(self.token, message_id=fail_id)
+        self.assertEqual(replay_res["status_code"], 200)
+
+        # Stream stats
+        stats_res = self.api.get_stream_router_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("published_count", stats_res["stats"])
+
 
 if __name__ == "__main__":
     unittest.main()

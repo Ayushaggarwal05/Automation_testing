@@ -23,6 +23,7 @@ try:
     from analytics import analytics
     from policies import policies
     from contracts import contracts
+    from stream_router import stream_router
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -43,6 +44,7 @@ except ImportError:
     from src.analytics import analytics
     from src.policies import policies
     from src.contracts import contracts
+    from src.stream_router import stream_router
 
 
 class APIService:
@@ -65,6 +67,7 @@ class APIService:
         self.analytics = analytics
         self.policies = policies
         self.contracts = contracts
+        self.stream_router = stream_router
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -1195,6 +1198,140 @@ class APIService:
             return {"error": "Unauthorized", "status_code": 401}
 
         stats = self.contracts.get_stats()
+        return {"stats": stats, "status_code": 200}
+
+    def publish_stream_message(
+        self,
+        token: str,
+        topic: str,
+        payload: Dict[str, Any],
+        headers: Optional[Dict[str, str]] = None,
+        max_retries: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Publish a message to an event stream topic if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            msg = self.stream_router.publish(
+                topic=topic,
+                payload=payload,
+                headers=headers,
+                max_retries=max_retries,
+            )
+            return {
+                "message": "Message published successfully",
+                "envelope": msg.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def subscribe_stream_topic(
+        self,
+        token: str,
+        topic_pattern: str,
+        consumer_group: str,
+        filter_expression: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Subscribe a consumer group to a stream topic pattern if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            sub = self.stream_router.subscribe(
+                topic_pattern=topic_pattern,
+                consumer_group=consumer_group,
+                filter_expression=filter_expression,
+            )
+            return {
+                "message": "Subscribed to stream successfully",
+                "subscription": sub.to_dict(),
+                "status_code": 201,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def poll_stream_messages(
+        self,
+        token: str,
+        consumer_group: str,
+        topic: str,
+        limit: int = 10,
+    ) -> Dict[str, Any]:
+        """Poll matching unacknowledged messages for a consumer group if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            messages = self.stream_router.poll(
+                consumer_group=consumer_group,
+                topic=topic,
+                limit=limit,
+            )
+            return {
+                "messages": [m.to_dict() for m in messages],
+                "count": len(messages),
+                "status_code": 200,
+            }
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def acknowledge_stream_message(
+        self,
+        token: str,
+        message_id: str,
+        consumer_group: str,
+    ) -> Dict[str, Any]:
+        """Acknowledge a delivered stream message if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        ack = self.stream_router.acknowledge(message_id=message_id, consumer_group=consumer_group)
+        if not ack:
+            return {"error": f"Message '{message_id}' not found", "status_code": 404}
+        return {"message": f"Message '{message_id}' acknowledged", "status_code": 200}
+
+    def nack_stream_message(
+        self,
+        token: str,
+        message_id: str,
+        consumer_group: str,
+        reason: str = "",
+    ) -> Dict[str, Any]:
+        """Negative acknowledgment. Increments retry or routes to DLQ if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        nack = self.stream_router.nack(message_id=message_id, consumer_group=consumer_group, reason=reason)
+        if not nack:
+            return {"error": f"Message '{message_id}' not found", "status_code": 404}
+        return {"message": f"Message '{message_id}' negatively acknowledged", "status_code": 200}
+
+    def get_stream_dead_letters(self, token: str, limit: int = 50) -> Dict[str, Any]:
+        """List messages currently in the Dead Letter Queue if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        dlq = self.stream_router.get_dead_letter_queue(limit=limit)
+        return {"dead_letters": dlq, "count": len(dlq), "status_code": 200}
+
+    def replay_stream_dead_letter(self, token: str, message_id: str) -> Dict[str, Any]:
+        """Replay a message from the Dead Letter Queue if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        replayed = self.stream_router.replay_dead_letter(message_id=message_id)
+        if not replayed:
+            return {"error": f"Dead letter message '{message_id}' not found or already replayed", "status_code": 404}
+        return {"message": f"Dead letter message '{message_id}' replayed successfully", "status_code": 200}
+
+    def get_stream_router_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve stream router streaming telemetry if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.stream_router.get_stats()
         return {"stats": stats, "status_code": 200}
 
 

@@ -37,6 +37,8 @@ class AppConfig:
         self.policy_cache_enabled: bool = os.getenv("POLICY_CACHE_ENABLED", "true").lower() in ("true", "1", "yes")
         self.contract_strict_mode: bool = os.getenv("CONTRACT_STRICT_MODE", "true").lower() in ("true", "1", "yes")
         self.contract_max_schemas: int = int(os.getenv("CONTRACT_MAX_SCHEMAS", "500"))
+        self.stream_router_max_retries: int = int(os.getenv("STREAM_ROUTER_MAX_RETRIES", "3"))
+        self.stream_router_retention_limit: int = int(os.getenv("STREAM_ROUTER_RETENTION_LIMIT", "1000"))
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -66,6 +68,8 @@ class AppConfig:
             "policy_cache_enabled": self.policy_cache_enabled,
             "contract_strict_mode": self.contract_strict_mode,
             "contract_max_schemas": self.contract_max_schemas,
+            "stream_router_max_retries": self.stream_router_max_retries,
+            "stream_router_retention_limit": self.stream_router_retention_limit,
             "secret_key_configured": bool(self.secret_key),
         }
 

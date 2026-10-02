@@ -38,6 +38,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertTrue(cfg.policy_cache_enabled)
         self.assertTrue(cfg.contract_strict_mode)
         self.assertEqual(cfg.contract_max_schemas, 500)
+        self.assertEqual(cfg.stream_router_max_retries, 3)
+        self.assertEqual(cfg.stream_router_retention_limit, 1000)
 
     def test_to_dict_keys(self):
         cfg = AppConfig()
@@ -64,6 +66,8 @@ class TestAppConfig(unittest.TestCase):
         self.assertIn("policy_cache_enabled", d)
         self.assertIn("contract_strict_mode", d)
         self.assertIn("contract_max_schemas", d)
+        self.assertIn("stream_router_max_retries", d)
+        self.assertIn("stream_router_retention_limit", d)
         self.assertIn("secret_key_configured", d)
 
 
