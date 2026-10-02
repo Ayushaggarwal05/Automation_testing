@@ -25,6 +25,7 @@ try:
     from contracts import contracts
     from stream_router import stream_router
     from throttler import throttler
+    from leases import leases
 except ImportError:
     from src.auth import AuthService
     from src.events import events
@@ -47,6 +48,7 @@ except ImportError:
     from src.contracts import contracts
     from src.stream_router import stream_router
     from src.throttler import throttler
+    from src.leases import leases
 
 
 class APIService:
@@ -71,6 +73,7 @@ class APIService:
         self.contracts = contracts
         self.stream_router = stream_router
         self.throttler = throttler
+        self.leases = leases
         self.storage: BaseStorage = storage or InMemoryStorage(
             initial_data=[
                 {"id": 1, "name": "Item Alpha", "status": "active"},
@@ -1437,6 +1440,106 @@ class APIService:
             return {"error": "Unauthorized", "status_code": 401}
 
         stats = self.throttler.get_stats()
+        return {"stats": stats, "status_code": 200}
+
+    def acquire_distributed_lease(
+        self,
+        token: str,
+        resource_key: str,
+        holder: str,
+        duration_seconds: Optional[float] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Attempt to acquire an exclusive distributed lease lock on resource_key if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            result = self.leases.acquire(
+                resource_key=resource_key,
+                holder=holder,
+                duration_seconds=duration_seconds,
+                metadata=metadata,
+            )
+            status_code = 200 if result.acquired else 409
+            return {"result": result.to_dict(), "status_code": status_code}
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def renew_distributed_lease(
+        self,
+        token: str,
+        resource_key: str,
+        holder: str,
+        fencing_token: int,
+        extension_seconds: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Renew an active distributed lease lock if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        try:
+            result = self.leases.renew(
+                resource_key=resource_key,
+                holder=holder,
+                fencing_token=fencing_token,
+                extension_seconds=extension_seconds,
+            )
+            status_code = 200 if result.acquired else 409
+            return {"result": result.to_dict(), "status_code": status_code}
+        except ValueError as e:
+            return {"error": str(e), "status_code": 400}
+
+    def release_distributed_lease(
+        self,
+        token: str,
+        resource_key: str,
+        holder: str,
+        fencing_token: int,
+    ) -> Dict[str, Any]:
+        """Release a held distributed lease lock if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        released = self.leases.release(resource_key=resource_key, holder=holder, fencing_token=fencing_token)
+        if not released:
+            return {"error": f"Failed to release lock on '{resource_key}'. Invalid holder or token.", "status_code": 404}
+        return {"message": f"Lock on '{resource_key}' released successfully", "status_code": 200}
+
+    def inspect_distributed_lease(self, token: str, resource_key: str) -> Dict[str, Any]:
+        """Inspect the current lock state of a resource if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        lock = self.leases.inspect(resource_key=resource_key)
+        if not lock:
+            return {"error": f"Resource '{resource_key}' has no active or tracked lock", "status_code": 404}
+        return {"lock": lock, "status_code": 200}
+
+    def force_break_distributed_lease(self, token: str, resource_key: str, reason: str = "Admin override") -> Dict[str, Any]:
+        """Forcefully revoke an active lease on a resource if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        broken = self.leases.force_break(resource_key=resource_key, reason=reason)
+        if not broken:
+            return {"error": f"No active lock on '{resource_key}' to break", "status_code": 404}
+        return {"message": f"Lock on '{resource_key}' forcefully broken", "status_code": 200}
+
+    def list_active_distributed_leases(self, token: str) -> Dict[str, Any]:
+        """List all currently active leases if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        active = self.leases.list_active()
+        return {"leases": active, "count": len(active), "status_code": 200}
+
+    def get_lease_manager_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve aggregated distributed lease manager telemetry if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        stats = self.leases.get_stats()
         return {"stats": stats, "status_code": 200}
 
 

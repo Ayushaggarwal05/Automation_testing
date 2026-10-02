@@ -43,6 +43,9 @@ class TestAppConfig(unittest.TestCase):
         self.assertEqual(cfg.throttler_default_algorithm, "token_bucket")
         self.assertEqual(cfg.throttler_default_capacity, 100)
         self.assertEqual(cfg.throttler_default_refill_rate, 10.0)
+        self.assertEqual(cfg.lease_default_duration_seconds, 30.0)
+        self.assertEqual(cfg.lease_max_duration_seconds, 300.0)
+        self.assertEqual(cfg.lease_fencing_token_start, 1000)
 
     def test_to_dict_keys(self):
         cfg = AppConfig()
@@ -74,6 +77,9 @@ class TestAppConfig(unittest.TestCase):
         self.assertIn("throttler_default_algorithm", d)
         self.assertIn("throttler_default_capacity", d)
         self.assertIn("throttler_default_refill_rate", d)
+        self.assertIn("lease_default_duration_seconds", d)
+        self.assertIn("lease_max_duration_seconds", d)
+        self.assertIn("lease_fencing_token_start", d)
         self.assertIn("secret_key_configured", d)
 
 

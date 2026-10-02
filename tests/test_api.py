@@ -709,6 +709,69 @@ class TestAPIService(unittest.TestCase):
         self.assertEqual(stats_res["status_code"], 200)
         self.assertIn("total_checks", stats_res["stats"])
 
+    def test_leases_endpoints(self):
+        # Acquire lease
+        acq_res = self.api.acquire_distributed_lease(
+            self.token,
+            resource_key="etl_pipeline",
+            holder="runner_1",
+            duration_seconds=5.0,
+            metadata={"priority": "high"},
+        )
+        self.assertEqual(acq_res["status_code"], 200)
+        self.assertTrue(acq_res["result"]["acquired"])
+        token = acq_res["result"]["fencing_token"]
+
+        # Conflict on same resource
+        conflict_res = self.api.acquire_distributed_lease(
+            self.token,
+            resource_key="etl_pipeline",
+            holder="runner_2",
+            duration_seconds=5.0,
+        )
+        self.assertEqual(conflict_res["status_code"], 409)
+        self.assertFalse(conflict_res["result"]["acquired"])
+
+        # Inspect lock
+        insp_res = self.api.inspect_distributed_lease(self.token, resource_key="etl_pipeline")
+        self.assertEqual(insp_res["status_code"], 200)
+        self.assertEqual(insp_res["lock"]["holder"], "runner_1")
+
+        # Renew lease
+        renew_res = self.api.renew_distributed_lease(
+            self.token,
+            resource_key="etl_pipeline",
+            holder="runner_1",
+            fencing_token=token,
+            extension_seconds=10.0,
+        )
+        self.assertEqual(renew_res["status_code"], 200)
+        self.assertTrue(renew_res["result"]["acquired"])
+
+        # List active leases
+        list_res = self.api.list_active_distributed_leases(self.token)
+        self.assertEqual(list_res["status_code"], 200)
+        self.assertGreaterEqual(list_res["count"], 1)
+
+        # Release lease
+        rel_res = self.api.release_distributed_lease(
+            self.token,
+            resource_key="etl_pipeline",
+            holder="runner_1",
+            fencing_token=token,
+        )
+        self.assertEqual(rel_res["status_code"], 200)
+
+        # Force break test
+        self.api.acquire_distributed_lease(self.token, "hung_job", "bad_node", duration_seconds=10.0)
+        break_res = self.api.force_break_distributed_lease(self.token, resource_key="hung_job", reason="Manual kill")
+        self.assertEqual(break_res["status_code"], 200)
+
+        # Lease stats
+        stats_res = self.api.get_lease_manager_stats(self.token)
+        self.assertEqual(stats_res["status_code"], 200)
+        self.assertIn("acquisitions_count", stats_res["stats"])
+
 
 if __name__ == "__main__":
     unittest.main()

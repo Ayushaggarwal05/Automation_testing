@@ -42,6 +42,9 @@ class AppConfig:
         self.throttler_default_algorithm: str = os.getenv("THROTTLER_DEFAULT_ALGORITHM", "token_bucket")
         self.throttler_default_capacity: int = int(os.getenv("THROTTLER_DEFAULT_CAPACITY", "100"))
         self.throttler_default_refill_rate: float = float(os.getenv("THROTTLER_DEFAULT_REFILL_RATE", "10.0"))
+        self.lease_default_duration_seconds: float = float(os.getenv("LEASE_DEFAULT_DURATION_SECONDS", "30.0"))
+        self.lease_max_duration_seconds: float = float(os.getenv("LEASE_MAX_DURATION_SECONDS", "300.0"))
+        self.lease_fencing_token_start: int = int(os.getenv("LEASE_FENCING_TOKEN_START", "1000"))
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -76,6 +79,9 @@ class AppConfig:
             "throttler_default_algorithm": self.throttler_default_algorithm,
             "throttler_default_capacity": self.throttler_default_capacity,
             "throttler_default_refill_rate": self.throttler_default_refill_rate,
+            "lease_default_duration_seconds": self.lease_default_duration_seconds,
+            "lease_max_duration_seconds": self.lease_max_duration_seconds,
+            "lease_fencing_token_start": self.lease_fencing_token_start,
             "secret_key_configured": bool(self.secret_key),
         }
 
