@@ -27,6 +27,7 @@ graph TD
         Analytics[AnalyticsEngine (src/analytics.py)]
         Contracts[ContractValidationEngine (src/contracts.py)]
         StreamRouter[StreamRouterEngine (src/stream_router.py)]
+        Throttler[TrafficThrottler (src/throttler.py)]
         Events[Event Bus (src/events.py)]
     end
 
@@ -48,6 +49,7 @@ graph TD
     API -->|Ingest & Query| Analytics
     API -->|Register & Validate| Contracts
     API -->|Route & Stream| StreamRouter
+    API -->|Evaluate & Limit| Throttler
     Workflows -->|Publish Events| Events
     Flags -->|Publish Events| Events
     Resilience -->|Publish Events| Events
@@ -55,6 +57,7 @@ graph TD
     Analytics -->|Publish Events| Events
     Contracts -->|Publish Events| Events
     StreamRouter -->|Publish Events| Events
+    Throttler -->|Publish Events| Events
 end
 ```
 
@@ -145,6 +148,11 @@ sequenceDiagram
     - `nack_stream_message(token, subscription_id, message_id)`: Negatively acknowledge messages with retry logic and DLQ routing.
     - `get_stream_dead_letters(token)`: Retrieve dead-letter queue entries.
     - `replay_stream_dead_letter(token, dlq_id)`: Replay dead-lettered messages.
+  - **Traffic Throttling & Rate Limiting**:
+    - `register_throttle_rule(token, name, ...)`: Register a rate-limiting rule.
+    - `evaluate_throttle_request(token, rule_name, client_id, ...)`: Evaluate request against throttle rules.
+    - `blacklist_client(token, client_id, ...)`: Add client to throttle blacklist.
+    - `unblacklist_client(token, client_id)`: Remove client from throttle blacklist.
 
 ### 3.2 Authentication Service (`src/auth.py`)
 - **Security Middleware**: Manages cryptographic token generation using `SHA-256` hashing with secret key and timestamps.
@@ -157,20 +165,4 @@ sequenceDiagram
 ### 3.4 Workflow Engine (`src/workflows.py`)
 - **Automation & Execution Pipeline**: Manages multi-step synchronous workflows (`Workflow`, `WorkflowStep`, `WorkflowExecution`).
 - **Configuration Limits**: Respects execution limits defined in `AppConfig` (such as `workflow_max_steps` and `workflow_execution_timeout_seconds`).
-- **Event-Driven Notifications**: Publishes lifecycle events to the internal event bus, including:
-  - `workflow_created` / `workflow_deleted`
-  - `workflow_execution_started`
-  - `workflow_execution_completed` / `workflow_execution_failed`
-
-### 3.5 Audit Log Manager (`src/audit.py`)
-- **Tamper-Evident Security Log**: Maintains immutable compliance audit records using SHA-256 cryptographic hash chaining (`AuditRecord` and `AuditLogManager`).
-- **Integrity Validation**: Provides cryptographic verification of logs to detect unauthorized tampering or corruption.
-- **Configurable Retention**: Respects settings like `audit_retention_days` and `audit_tamper_protection_enabled`.
-
-### 3.6 Feature Flag Manager (`src/feature_flags.py`)
-- **Flag Control & Rollouts**: Manages feature toggles with percentage rollouts, user/role targeting, and caching rules.
-- **Deterministic Evaluation**: Evaluates flags accurately with context.
-
-### 3.7 Stream Router Engine (`src/stream_router.py`)
-- **Pub-Sub Messaging & Consumer Groups**: Manages topic-based message streaming, consumer group partitioning, payload filtering, and message acknowledgments.
-- **Reliability & Error Handling**: Implements message retries, Dead-Letter Queue (DLQ) routing upon retry exhaustion, and message replay capabilities.
+- **Event-Driven Notifications**:

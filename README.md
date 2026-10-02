@@ -22,7 +22,8 @@ Welcome to the **Automation Testing** sample repository (v2.4.0). This repositor
     ├── analytics.py
     ├── policies.py
     ├── contracts.py
-    └── stream_router.py
+    ├── stream_router.py
+    └── throttler.py
 ```
 
 ## Getting Started
