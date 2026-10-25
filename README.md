@@ -1,6 +1,6 @@
 # Automation Testing Repository
 
-Welcome to the **Automation Testing** sample repository (v2.4.0). This repository is structured to test GitHub workflows, CI/CD pipelines, and repository automations.
+Welcome to the **Automation Testing** sample repository (v2.5.0). This repository is structured to test GitHub workflows, CI/CD pipelines, and repository automations.
 
 ## Project Structure
 
@@ -49,7 +49,7 @@ python src/api.py
 ## Features
 
 - **Authentication Module**: Token generation, role-based access control, and validation mock utilities.
-- **REST API Service**: Endpoints for health checks (reporting service version 2.4.0), resource lookup, creation, status update, deletion, and webhook management.
+- **REST API Service**: Endpoints for health checks (reporting service version 2.5.0), resource lookup, creation, status update, deletion, and webhook management.
 - **Webhook Management**: Register subscriptions, list active webhooks, and process event payloads with HMAC-SHA256 signatures.
 - **Audit Logging Module**: Tamper-evident, cryptographically chained audit logging with SHA-256 hash validation, compliance categorization, and integrity verification.
 - **Feature Flag Management**: Feature flags with percentage rollouts, user/role targeting, evaluation caching, and event publishing.
@@ -65,7 +65,7 @@ python src/api.py
 
 | Method | Endpoint | Description | Auth Required |
 |---|---|---|---|
-| `GET` | `/health` | Service health status check (v2.4.0) | No |
+| `GET` | `/health` | Service health status check (v2.5.0) | No |
 | `GET` | `/items` | List all stored items | Yes |
 | `GET` | `/items/<id>` | Fetch single item by ID | Yes |
 | `POST` | `/items` | Create a new item | Yes |
