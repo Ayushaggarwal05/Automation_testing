@@ -41,6 +41,36 @@ class RateLimiter:
         self._history[identifier].append(now)
         return True
 
+    def configure(self, max_requests: int, window_seconds: int) -> None:
+        """Update rate limit threshold and window configuration."""
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+
+    def reset(self, identifier: Optional[str] = None) -> bool:
+        """Clear rate limit history for a specific identifier or all clients."""
+        if identifier:
+            if identifier in self._history:
+                del self._history[identifier]
+                return True
+            return False
+        self._history.clear()
+        return True
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Return rate limiter operational metrics."""
+        now = time.time()
+        active_clients = sum(
+            1 for stamps in self._history.values()
+            if any(now - t < self.window_seconds for t in stamps)
+        )
+        total_tracked = sum(len(stamps) for stamps in self._history.values())
+        return {
+            "max_requests": self.max_requests,
+            "window_seconds": self.window_seconds,
+            "active_clients_count": active_clients,
+            "total_tracked_requests": total_tracked,
+        }
+
 
 class MiddlewarePipeline:
     """Executes pre- and post-processing middleware hooks."""
@@ -57,3 +87,10 @@ class MiddlewarePipeline:
                 "status_code": 429,
             }
         return None
+
+    def get_pipeline_info(self) -> Dict[str, Any]:
+        """Return pipeline state and configured middleware handlers."""
+        return {
+            "rate_limiter": self.rate_limiter.get_stats(),
+            "pipeline_enabled": True,
+        }

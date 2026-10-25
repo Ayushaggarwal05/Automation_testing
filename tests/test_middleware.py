@@ -38,6 +38,43 @@ class TestMiddleware(unittest.TestCase):
         self.assertIsNotNone(blocked)
         self.assertEqual(blocked["status_code"], 429)
 
+    def test_rate_limiter_configure_and_reset(self):
+        limiter = RateLimiter(max_requests=2, window_seconds=10)
+        self.assertTrue(limiter.is_allowed("user-1"))
+        self.assertTrue(limiter.is_allowed("user-1"))
+        self.assertFalse(limiter.is_allowed("user-1"))
+
+        # Configure to allow more requests
+        limiter.configure(max_requests=5, window_seconds=20)
+        self.assertEqual(limiter.max_requests, 5)
+        self.assertEqual(limiter.window_seconds, 20)
+        self.assertTrue(limiter.is_allowed("user-1"))
+
+        # Reset specific user
+        self.assertTrue(limiter.reset("user-1"))
+        self.assertEqual(len(limiter._history.get("user-1", [])), 0)
+
+        # Reset all
+        limiter.is_allowed("user-2")
+        self.assertTrue(limiter.reset())
+        self.assertEqual(len(limiter._history), 0)
+
+    def test_rate_limiter_stats_and_pipeline_info(self):
+        pipeline = MiddlewarePipeline()
+        pipeline.rate_limiter.is_allowed("client-alpha")
+        pipeline.rate_limiter.is_allowed("client-beta")
+
+        stats = pipeline.rate_limiter.get_stats()
+        self.assertEqual(stats["max_requests"], 100)
+        self.assertEqual(stats["window_seconds"], 60)
+        self.assertEqual(stats["active_clients_count"], 2)
+        self.assertEqual(stats["total_tracked_requests"], 2)
+
+        info = pipeline.get_pipeline_info()
+        self.assertTrue(info["pipeline_enabled"])
+        self.assertIn("rate_limiter", info)
+
 
 if __name__ == "__main__":
     unittest.main()
+

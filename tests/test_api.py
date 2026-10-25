@@ -37,7 +37,7 @@ class TestAPIService(unittest.TestCase):
     def test_health_check(self):
         res = self.api.health_check()
         self.assertEqual(res["status"], "ok")
-        self.assertEqual(res["version"], "2.4.0")
+        self.assertEqual(res["version"], "2.5.0")
 
     def test_list_plugins(self):
         res = self.api.list_plugins(self.token)
@@ -771,6 +771,53 @@ class TestAPIService(unittest.TestCase):
         stats_res = self.api.get_lease_manager_stats(self.token)
         self.assertEqual(stats_res["status_code"], 200)
         self.assertIn("acquisitions_count", stats_res["stats"])
+
+    def test_middleware_endpoints(self):
+        # Unauthorized check
+        unauth_status = self.api.get_middleware_status("invalid_token")
+        self.assertEqual(unauth_status["status_code"], 401)
+
+        # Authorized status
+        status_res = self.api.get_middleware_status(self.token)
+        self.assertEqual(status_res["status_code"], 200)
+        self.assertTrue(status_res["pipeline"]["pipeline_enabled"])
+        self.assertEqual(status_res["pipeline"]["rate_limiter"]["max_requests"], 100)
+
+        # Configure rate limit - invalid values
+        bad_cfg = self.api.configure_rate_limit(self.token, max_requests=0, window_seconds=60)
+        self.assertEqual(bad_cfg["status_code"], 400)
+
+        # Configure rate limit - valid values
+        cfg_res = self.api.configure_rate_limit(self.token, max_requests=50, window_seconds=30)
+        self.assertEqual(cfg_res["status_code"], 200)
+        self.assertEqual(cfg_res["config"]["max_requests"], 50)
+        self.assertEqual(cfg_res["config"]["window_seconds"], 30)
+
+        # Reset rate limit
+        reset_res = self.api.reset_rate_limit(self.token, identifier="client-xyz")
+        self.assertEqual(reset_res["status_code"], 200)
+        self.assertIn("client-xyz", reset_res["message"])
+
+    def test_event_subscribers_endpoint(self):
+        # Unauthorized check
+        unauth_res = self.api.get_event_subscribers("bad_token")
+        self.assertEqual(unauth_res["status_code"], 401)
+
+        # Authorized check
+        res = self.api.get_event_subscribers(self.token)
+        self.assertEqual(res["status_code"], 200)
+        self.assertIn("listener_count", res)
+
+    def test_storage_stats_endpoint(self):
+        # Unauthorized check
+        unauth_res = self.api.get_storage_stats("bad_token")
+        self.assertEqual(unauth_res["status_code"], 401)
+
+        # Authorized check
+        res = self.api.get_storage_stats(self.token)
+        self.assertEqual(res["status_code"], 200)
+        self.assertEqual(res["storage_type"], "InMemoryStorage")
+        self.assertGreaterEqual(res["total_items"], 0)
 
 
 if __name__ == "__main__":

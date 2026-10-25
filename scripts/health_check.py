@@ -36,6 +36,13 @@ def run_diagnostics() -> int:
         print("[ERROR] Auth validation check failed!")
         return 1
 
+    # Check Storage & Middleware Pipeline
+    storage_stats = api.get_storage_stats(auth_token)
+    print(f"[Storage Check] Type: {storage_stats.get('storage_type')} | Total Items: {storage_stats.get('total_items')}")
+
+    middleware_status = api.get_middleware_status(auth_token)
+    print(f"[Middleware Check] Pipeline Status: {middleware_status.get('status_code')}")
+
     print("=" * 50)
     print("All diagnostic checks PASSED successfully.")
     print("=" * 50)

@@ -45,6 +45,9 @@ class AppConfig:
         self.lease_default_duration_seconds: float = float(os.getenv("LEASE_DEFAULT_DURATION_SECONDS", "30.0"))
         self.lease_max_duration_seconds: float = float(os.getenv("LEASE_MAX_DURATION_SECONDS", "300.0"))
         self.lease_fencing_token_start: int = int(os.getenv("LEASE_FENCING_TOKEN_START", "1000"))
+        self.api_version: str = os.getenv("API_VERSION", "2.5.0")
+        self.rate_limit_default_max_requests: int = int(os.getenv("RATE_LIMIT_DEFAULT_MAX_REQUESTS", "100"))
+        self.rate_limit_default_window_seconds: int = int(os.getenv("RATE_LIMIT_DEFAULT_WINDOW_SECONDS", "60"))
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary (masks sensitive keys)."""
@@ -82,6 +85,9 @@ class AppConfig:
             "lease_default_duration_seconds": self.lease_default_duration_seconds,
             "lease_max_duration_seconds": self.lease_max_duration_seconds,
             "lease_fencing_token_start": self.lease_fencing_token_start,
+            "api_version": self.api_version,
+            "rate_limit_default_max_requests": self.rate_limit_default_max_requests,
+            "rate_limit_default_window_seconds": self.rate_limit_default_window_seconds,
             "secret_key_configured": bool(self.secret_key),
         }
 

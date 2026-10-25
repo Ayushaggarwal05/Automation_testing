@@ -46,6 +46,9 @@ class TestAppConfig(unittest.TestCase):
         self.assertEqual(cfg.lease_default_duration_seconds, 30.0)
         self.assertEqual(cfg.lease_max_duration_seconds, 300.0)
         self.assertEqual(cfg.lease_fencing_token_start, 1000)
+        self.assertEqual(cfg.api_version, "2.5.0")
+        self.assertEqual(cfg.rate_limit_default_max_requests, 100)
+        self.assertEqual(cfg.rate_limit_default_window_seconds, 60)
 
     def test_to_dict_keys(self):
         cfg = AppConfig()
@@ -80,6 +83,9 @@ class TestAppConfig(unittest.TestCase):
         self.assertIn("lease_default_duration_seconds", d)
         self.assertIn("lease_max_duration_seconds", d)
         self.assertIn("lease_fencing_token_start", d)
+        self.assertIn("api_version", d)
+        self.assertIn("rate_limit_default_max_requests", d)
+        self.assertIn("rate_limit_default_window_seconds", d)
         self.assertIn("secret_key_configured", d)
 
 

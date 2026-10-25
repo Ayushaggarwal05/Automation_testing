@@ -89,7 +89,7 @@ class APIService:
     def health_check(self) -> Dict[str, str]:
         """Simple health check endpoint."""
         self.metrics.record_request("/health", 1.0, 200)
-        return {"status": "ok", "service": "automation-api", "version": "2.4.0"}
+        return {"status": "ok", "service": "automation-api", "version": "2.5.0"}
 
     def list_plugins(self, token: str) -> Dict[str, Any]:
         """List all active extensions and plugins if authorized."""
@@ -1541,6 +1541,74 @@ class APIService:
 
         stats = self.leases.get_stats()
         return {"stats": stats, "status_code": 200}
+
+    # =========================================================================
+    # Middleware & Pipeline Management Endpoints
+    # =========================================================================
+
+    def get_middleware_status(self, token: str) -> Dict[str, Any]:
+        """Retrieve middleware pipeline status and rate limiter metrics if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        return {
+            "pipeline": self.middleware.get_pipeline_info(),
+            "status_code": 200,
+        }
+
+    def configure_rate_limit(self, token: str, max_requests: int, window_seconds: int) -> Dict[str, Any]:
+        """Configure sliding window rate limit parameters if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        if max_requests <= 0 or window_seconds <= 0:
+            return {"error": "max_requests and window_seconds must be positive", "status_code": 400}
+
+        self.middleware.rate_limiter.configure(max_requests=max_requests, window_seconds=window_seconds)
+        self.events.publish("rate_limit_configured", {"max_requests": max_requests, "window_seconds": window_seconds})
+        return {
+            "message": "Rate limiter configuration updated successfully",
+            "config": {"max_requests": max_requests, "window_seconds": window_seconds},
+            "status_code": 200,
+        }
+
+    def reset_rate_limit(self, token: str, identifier: Optional[str] = None) -> Dict[str, Any]:
+        """Reset rate limiter tracked request history if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        self.middleware.rate_limiter.reset(identifier)
+        return {
+            "message": f"Rate limit history reset for {identifier or 'all clients'}",
+            "status_code": 200,
+        }
+
+    # =========================================================================
+    # Event Bus & Storage Endpoints
+    # =========================================================================
+
+    def get_event_subscribers(self, token: str, event_name: Optional[str] = None) -> Dict[str, Any]:
+        """Retrieve event dispatcher listener counts and registered events if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        count = self.events.listener_count(event_name)
+        return {
+            "event_name": event_name,
+            "listener_count": count,
+            "status_code": 200,
+        }
+
+    def get_storage_stats(self, token: str) -> Dict[str, Any]:
+        """Retrieve in-memory item storage statistics if authorized."""
+        if not self.auth_service.validate_token(token):
+            return {"error": "Unauthorized", "status_code": 401}
+
+        return {
+            "storage_type": self.storage.__class__.__name__,
+            "total_items": len(self.storage.get_all()),
+            "status_code": 200,
+        }
 
 
 
